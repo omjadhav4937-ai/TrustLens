@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { DEMO_WARNING_LABELS, SECTION_IDS } from "@/data/scam-spotter";
+import { DEMO_WARNING_LABELS, SECTION_IDS } from "@/data/trust-lens";
 import { scrollToSection } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Link2, ShieldQuestion, Smartphone } from "lucide-react";
@@ -15,7 +15,7 @@ const WARNING_ICONS = [AlertTriangle, Link2, ShieldQuestion];
 export function Hero() {
   return (
     <section id={SECTION_IDS.home} className="relative scroll-mt-20 overflow-hidden">
-      <div className="spotter-grid pointer-events-none absolute inset-0" aria-hidden="true" />
+      <div className="lens-grid pointer-events-none absolute inset-0" aria-hidden="true" />
       <div
         className="pointer-events-none absolute -top-48 left-1/2 h-[520px] w-[min(1100px,140%)] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
         style={{
@@ -30,7 +30,7 @@ export function Hero() {
         <div className="flex flex-col items-start">
           <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-secondary/60 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
-            Student prototype · SETU 2026
+            Privacy-first scam detection
           </span>
 
           <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-balance sm:text-5xl lg:text-6xl">
@@ -49,8 +49,9 @@ export function Hero() {
           </h1>
 
           <p className="mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Spot suspicious messages, understand the warning signs, and take
-            safer action before you click.
+            TrustLens helps you examine a message you are unsure about — the
+            warning signs, the risk level, and the safer next step — explained in
+            plain language, and without your message ever leaving your browser.
           </p>
 
           <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
@@ -79,7 +80,7 @@ export function Hero() {
           </div>
 
           <p className="mt-5 text-sm text-muted-foreground">
-            No sign-up required. Nothing you paste leaves your browser.
+            No sign-up. Nothing you paste is uploaded or stored.
           </p>
         </div>
 
@@ -157,8 +158,8 @@ export function Hero() {
               </ul>
 
               <p className="mt-5 border-t border-border/60 pt-4 text-xs leading-relaxed text-muted-foreground">
-                Illustrative warning labels only. Scam Spotter has not scored
-                this message — the detection engine is not part of this step.
+                Illustrative warning labels only. TrustLens has not scored this
+                message — the detection engine is not part of this step.
               </p>
             </div>
           </div>

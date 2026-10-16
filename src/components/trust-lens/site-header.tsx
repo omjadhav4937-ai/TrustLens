@@ -1,6 +1,6 @@
-import { Brand } from "@/components/scam-spotter/brand";
+import { Brand } from "@/components/trust-lens/brand";
 import { Button } from "@/components/ui/button";
-import { NAV_LINKS } from "@/data/scam-spotter";
+import { NAV_LINKS } from "@/data/trust-lens";
 import { scrollToSection } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -39,9 +39,7 @@ export function SiteHeader() {
     <header
       className={cn(
         "sticky top-0 z-50 w-full border-b transition-colors duration-300",
-        elevated || menuOpen
-          ? "border-border/70 spotter-glass"
-          : "border-transparent",
+        elevated || menuOpen ? "border-border/70 lens-glass" : "border-transparent",
       )}
     >
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
@@ -52,7 +50,7 @@ export function SiteHeader() {
             goTo("home");
           }}
           className={cn("shrink-0", FOCUS_RING)}
-          aria-label="Scam Spotter — back to top"
+          aria-label="TrustLens — back to top"
         >
           <Brand />
         </a>
@@ -113,7 +111,7 @@ export function SiteHeader() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22, ease: "easeOut" }}
-            className="spotter-glass overflow-hidden border-t border-border/70 lg:hidden"
+            className="lens-glass overflow-hidden border-t border-border/70 lg:hidden"
           >
             <nav
               aria-label="Mobile"

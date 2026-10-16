@@ -1,14 +1,14 @@
-import { Section, SectionHeading } from "@/components/scam-spotter/section";
-import { SECTION_IDS, TRUST_POINTS } from "@/data/scam-spotter";
+import { Section, SectionHeading } from "@/components/trust-lens/section";
+import { SECTION_IDS, TRUST_POINTS } from "@/data/trust-lens";
 import { cn } from "@/lib/utils";
 
 export function TrustIndicators() {
   return (
     <Section id={SECTION_IDS.trust} className="border-y border-border/60 bg-card/40">
       <SectionHeading
-        eyebrow="Why it exists"
-        title="Built to explain, not to guess"
-        description="Three principles shape the project. None of them require you to hand over your messages."
+        eyebrow="Our approach"
+        title="Built to be trusted with your messages"
+        description="No accounts, no uploads, and no black box. TrustLens is designed for the moment a message does not feel right — for everyday internet users, students, and professionals alike."
       />
 
       <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

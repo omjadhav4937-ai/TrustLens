@@ -1,7 +1,7 @@
-import { Section, SectionHeading } from "@/components/scam-spotter/section";
+import { Section, SectionHeading } from "@/components/trust-lens/section";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { SECTION_IDS } from "@/data/scam-spotter";
+import { SECTION_IDS } from "@/data/trust-lens";
 import { cn } from "@/lib/utils";
 import { Info } from "lucide-react";
 import type { ReactNode } from "react";
@@ -18,10 +18,17 @@ function PlaceholderPanel({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-2xl border border-border/70 bg-background/40 p-5", className)}>
+    <div
+      className={cn(
+        "rounded-2xl border border-border/70 bg-background/40 p-5",
+        className,
+      )}
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-1">
         <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-        {hint && <span className="text-[0.6875rem] text-muted-foreground">{hint}</span>}
+        {hint && (
+          <span className="text-[0.6875rem] text-muted-foreground">{hint}</span>
+        )}
       </div>
       <div className="mt-3">{children}</div>
     </div>
@@ -45,9 +52,9 @@ export function ResultsPlaceholder({ requested }: { requested: boolean }) {
   return (
     <Section id={SECTION_IDS.results} className="pt-0 sm:pt-0">
       <SectionHeading
-        eyebrow="Results area"
-        title="Your result will appear here"
-        description="This area is prepared for the rule-based detection engine. No score, risk level, or warning sign is generated yet."
+        eyebrow="Your risk report"
+        title="The result of your check will appear here"
+        description="This area is prepared for the detection engine. TrustLens has not scored your message yet, so no risk level, score, or warning sign is shown."
       />
 
       <div className="mx-auto mt-12 max-w-4xl rounded-3xl border border-dashed border-border/80 bg-card/40 p-5 sm:p-8">
@@ -75,9 +82,11 @@ export function ResultsPlaceholder({ requested }: { requested: boolean }) {
             <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
             <p className="text-sm leading-relaxed text-foreground/90">
               <span className="font-semibold">No analysis was performed.</span>{" "}
-              The interface received your message, but the detection engine is
-              implemented in the next step of the project — so no risk level,
-              score, or warning sign is shown.
+              TrustLens received your message, but the detection engine arrives in
+              the next step of the project — so there is no risk level, score, or
+              warning sign to show. Use{" "}
+              <span className="font-semibold">Clear</span> to reset the analyzer
+              and try another message.
             </p>
           </div>
         )}
@@ -86,7 +95,7 @@ export function ResultsPlaceholder({ requested }: { requested: boolean }) {
           <PlaceholderPanel title="Risk level" hint="Placeholder">
             <p className="text-2xl font-semibold text-muted-foreground/70">—</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Low / Moderate / High will be shown here.
+              Low, Medium, or High will be shown here.
             </p>
           </PlaceholderPanel>
 
@@ -115,9 +124,17 @@ export function ResultsPlaceholder({ requested }: { requested: boolean }) {
             className="sm:col-span-2"
           >
             <div className="rounded-xl border border-dashed border-border/80 bg-secondary/20 p-4 text-sm leading-relaxed text-muted-foreground">
-              Your message will be re-displayed here with the matched suspicious
-              phrases highlighted in context.
+              Your message will be shown again here with the phrases that
+              triggered a warning marked in place.
             </div>
+          </PlaceholderPanel>
+
+          <PlaceholderPanel
+            title="Suspicious links and lookalike domains"
+            hint="Prepared view"
+            className="sm:col-span-2"
+          >
+            <DashList rows={2} />
           </PlaceholderPanel>
 
           <PlaceholderPanel title="Explanation" hint="Two slots prepared">

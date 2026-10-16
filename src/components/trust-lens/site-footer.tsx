@@ -1,6 +1,6 @@
-import { Brand } from "@/components/scam-spotter/brand";
-import { FOCUS_RING } from "@/components/scam-spotter/site-header";
-import { NAV_LINKS } from "@/data/scam-spotter";
+import { Brand } from "@/components/trust-lens/brand";
+import { FOCUS_RING } from "@/components/trust-lens/site-header";
+import { NAV_LINKS, TAGLINE } from "@/data/trust-lens";
 import { scrollToSection } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 import { ShieldAlert } from "lucide-react";
@@ -12,11 +12,9 @@ export function SiteFooter() {
         <div className="grid gap-10 lg:grid-cols-[1.3fr_1fr]">
           <div>
             <Brand />
-            <p className="mt-4 text-lg font-semibold tracking-tight">
-              Think Before You Tap.
-            </p>
+            <p className="mt-4 text-lg font-semibold tracking-tight">{TAGLINE}</p>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-              A student prototype that helps you review a suspicious message,
+              A privacy-first way to review a message you are unsure about,
               understand the warning signs, and decide on a safer next step.
             </p>
           </div>
@@ -70,7 +68,7 @@ export function SiteFooter() {
           />
           <p className="text-xs leading-relaxed text-muted-foreground">
             <span className="font-semibold text-foreground">Disclaimer:</span>{" "}
-            Scam Spotter is a student prototype built for an academic event. It
+            TrustLens is a student prototype built for an academic event. It
             highlights possible warning signs in a message and cannot guarantee
             whether a message is safe or fraudulent. Always verify through the
             official app, website, or phone number of the organisation involved,
@@ -79,7 +77,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-8 flex flex-col gap-2 border-t border-border/60 pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Scam Spotter · Team One Piece</p>
+          <p>© {new Date().getFullYear()} TrustLens · Team One Piece</p>
           <p>Built for SETU 2026, Problem Statement PS-01</p>
         </div>
       </div>

@@ -1,5 +1,5 @@
-import { Section, SectionHeading } from "@/components/scam-spotter/section";
-import { SECTION_IDS } from "@/data/scam-spotter";
+import { Section, SectionHeading } from "@/components/trust-lens/section";
+import { SECTION_IDS } from "@/data/trust-lens";
 import { GraduationCap, Target, Users } from "lucide-react";
 
 const FACTS = [
@@ -16,8 +16,7 @@ const FACTS = [
   {
     icon: GraduationCap,
     label: "Institution",
-    value:
-      "Shri Vile Parle Kelavani Mandal's Institute of Technology, Dhule.",
+    value: "Shri Vile Parle Kelavani Mandal's Institute of Technology, Dhule.",
   },
 ];
 
@@ -25,19 +24,19 @@ export function About() {
   return (
     <Section id={SECTION_IDS.about}>
       <SectionHeading
-        eyebrow="About"
-        title="A student prototype, built in the open"
-        description="Scam Spotter is a college project, not a commercial product. It exists to make the warning signs of a fraudulent message easier to see."
+        eyebrow="About TrustLens"
+        title="A student-built tool with a serious purpose"
+        description="TrustLens was created for SETU 2026, problem statement PS-01, by Team One Piece. It is a college project rather than a commercial product, and it exists to make the warning signs of a fraudulent message easier to see."
       />
 
       <div className="mx-auto mt-12 max-w-4xl rounded-3xl border border-border/80 bg-card/70 p-6 sm:p-8">
         <p className="text-pretty text-base leading-relaxed text-foreground/90">
-          Scam Spotter is a student prototype created for{" "}
-          <span className="font-semibold">SETU 2026, PS-01</span> by{" "}
-          <span className="font-semibold">Team One Piece</span>. The project
-          focuses on one everyday problem: people receive messages that pressure
-          them into clicking a link or sharing a code, and the warning signs are
-          easy to miss when you are in a hurry.
+          TrustLens is for everyday internet users, students, and professionals
+          who want to recognise scam messages and protect themselves from online
+          fraud. Fraudulent messages work by creating pressure and hiding where
+          a tap will really take you — a blocked account, a missed delivery, an
+          offer that expires in an hour. TrustLens is designed to slow that
+          moment down and show you what is actually in front of you.
         </p>
 
         <dl className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -59,9 +58,10 @@ export function About() {
 
         <p className="mt-8 border-t border-border/60 pt-6 text-sm leading-relaxed text-muted-foreground">
           Scope note: this build covers the interface only. Warning-sign
-          detection, scoring, and explanations are planned for the next step of
-          the project, and the prototype will always present findings as
-          possible warning signs rather than a guarantee.
+          detection, risk scoring, link checks, and explanations are planned for
+          the next step of the project. TrustLens will always present its
+          findings as possible warning signs rather than a guarantee about any
+          message.
         </p>
       </div>
     </Section>

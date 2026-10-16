@@ -1,8 +1,9 @@
+import { TAGLINE } from "@/data/trust-lens";
 import { cn } from "@/lib/utils";
 import { ShieldCheck } from "lucide-react";
 
 /**
- * Scam Spotter wordmark: shield icon plus name and tagline.
+ * TrustLens wordmark: shield icon plus name and tagline.
  * Used in the header, the footer, and the about panel.
  */
 export function Brand({
@@ -26,11 +27,11 @@ export function Brand({
       </span>
       <span className="flex flex-col">
         <span className="text-[0.95rem] font-semibold leading-tight tracking-tight">
-          Scam Spotter
+          TrustLens
         </span>
         {showTagline && (
           <span className="text-[0.625rem] font-medium uppercase leading-tight tracking-[0.16em] text-muted-foreground">
-            Think Before You Tap
+            {TAGLINE}
           </span>
         )}
       </span>

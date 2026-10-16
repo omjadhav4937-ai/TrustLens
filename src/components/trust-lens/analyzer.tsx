@@ -1,11 +1,11 @@
-import { Section, SectionHeading } from "@/components/scam-spotter/section";
+import { Section, SectionHeading } from "@/components/trust-lens/section";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   MAX_MESSAGE_LENGTH,
   SAMPLE_MESSAGE,
   SECTION_IDS,
-} from "@/data/scam-spotter";
+} from "@/data/trust-lens";
 import { cn } from "@/lib/utils";
 import { RotateCcw, ScanSearch, Sparkles, TriangleAlert } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
@@ -60,7 +60,7 @@ export function Analyzer({
         <SectionHeading
           eyebrow="Message analyzer"
           title="Check a message before you act on it"
-          description="Paste the full text you received. The analyzer runs entirely in your browser and shows a placeholder until the detection engine arrives."
+          description="Paste anything that looks suspicious — a bank alert, a delivery notice, a job offer, an unexpected payment request. TrustLens handles SMS, email, and chat messages, and keeps all of it in your browser."
         />
 
         <form
@@ -72,11 +72,11 @@ export function Analyzer({
             htmlFor={messageId}
             className="block text-sm font-semibold tracking-tight"
           >
-            Message to analyze
+            Your message
           </label>
           <p id={noticeId} className="mt-1 text-xs text-muted-foreground">
-            SMS, WhatsApp, email, or any chat message. Do not include personal
-            details you would not want to re-read.
+            Paste the full text you received. Avoid pasting personal details you
+            would not want to read back later.
           </p>
 
           <Textarea
@@ -149,9 +149,9 @@ export function Analyzer({
           </div>
 
           <p className="mt-5 border-t border-border/60 pt-4 text-xs leading-relaxed text-muted-foreground">
-            Privacy notice: Scam Spotter keeps your message inside this browser
-            tab. There is no account, no upload, and no server-side storage of
-            the text you paste.
+            Privacy notice: TrustLens never uploads your message. Everything
+            stays inside this browser tab — there is no account, no server-side
+            storage, and no logging of the text you paste.
           </p>
         </form>
       </div>

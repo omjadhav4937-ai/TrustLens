@@ -1,30 +1,35 @@
-import { Section, SectionHeading } from "@/components/scam-spotter/section";
+import { Section, SectionHeading } from "@/components/trust-lens/section";
 import { Badge } from "@/components/ui/badge";
-import { FEATURES, SECTION_IDS } from "@/data/scam-spotter";
+import { CAPABILITIES, SECTION_IDS } from "@/data/trust-lens";
 import { cn } from "@/lib/utils";
-import { CircleDashed, CircleCheck } from "lucide-react";
+import { CircleCheck, CircleDashed } from "lucide-react";
 
-export function Features() {
+const AVAILABLE_COUNT = CAPABILITIES.filter(
+  (capability) => capability.status === "available",
+).length;
+const PLANNED_COUNT = CAPABILITIES.length - AVAILABLE_COUNT;
+
+export function Capabilities() {
   return (
     <Section
-      id={SECTION_IDS.features}
+      id={SECTION_IDS.capabilities}
       className="border-y border-border/60 bg-card/40"
     >
       <SectionHeading
-        eyebrow="Planned capabilities"
-        title="What the full analyzer is being built to do"
-        description="This project ships in steps. Everything below is labelled honestly so you always know what is live today and what is still ahead."
+        eyebrow="What you can do"
+        title="Everything TrustLens is being built to handle"
+        description={`${AVAILABLE_COUNT} capabilities work today and ${PLANNED_COUNT} are on the way. Every card tells you exactly where it stands, so nothing is promised that is not there yet.`}
       />
 
       <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map((feature) => {
-          const isImplemented = feature.status === "implemented";
+        {CAPABILITIES.map((capability) => {
+          const isAvailable = capability.status === "available";
           return (
             <article
-              key={feature.title}
+              key={capability.title}
               className={cn(
                 "flex flex-col rounded-2xl border bg-card/70 p-6 transition-colors",
-                isImplemented
+                isAvailable
                   ? "border-emerald-400/30 hover:border-emerald-400/50"
                   : "border-border/70 hover:border-primary/40",
               )}
@@ -33,38 +38,38 @@ export function Features() {
                 <span
                   className={cn(
                     "flex size-10 items-center justify-center rounded-xl border",
-                    isImplemented
+                    isAvailable
                       ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
                       : "border-border/70 bg-secondary/70 text-primary",
                   )}
                   aria-hidden="true"
                 >
-                  <feature.icon className="size-5" />
+                  <capability.icon className="size-5" />
                 </span>
 
                 <Badge
                   variant="outline"
                   className={cn(
                     "gap-1 border-border/70 text-[0.625rem] font-semibold uppercase tracking-[0.12em]",
-                    isImplemented
+                    isAvailable
                       ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-100"
                       : "text-muted-foreground",
                   )}
                 >
-                  {isImplemented ? (
+                  {isAvailable ? (
                     <CircleCheck className="size-3" aria-hidden="true" />
                   ) : (
                     <CircleDashed className="size-3" aria-hidden="true" />
                   )}
-                  {isImplemented ? "Implemented" : "Planned"}
+                  {isAvailable ? "Available now" : "Planned"}
                 </Badge>
               </div>
 
               <h3 className="mt-5 text-base font-semibold tracking-tight">
-                {feature.title}
+                {capability.title}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {feature.description}
+                {capability.description}
               </p>
             </article>
           );
@@ -72,12 +77,12 @@ export function Features() {
       </div>
 
       <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-muted-foreground">
-        <span className="font-semibold text-foreground">Implemented today:</span>{" "}
-        the analyzer interface, sample-message loading, clearing the input, and
-        fully local (browser-only) processing.{" "}
-        <span className="font-semibold text-foreground">Planned next:</span> the
-        rule-based detection engine that produces the risk score, the
-        highlighted phrases, the explanations, and the safe next steps.
+        <span className="font-semibold text-foreground">Available today:</span>{" "}
+        the analyzer itself, the sample message, clearing the input, and
+        browser-only processing.{" "}
+        <span className="font-semibold text-foreground">Coming next:</span> the
+        detection engine that produces the risk level, the highlighted warning
+        signs, the link and lookalike-domain checks, and the safe next steps.
       </p>
     </Section>
   );

@@ -1,19 +1,19 @@
-import { About } from "@/components/scam-spotter/about";
-import { Analyzer } from "@/components/scam-spotter/analyzer";
-import { Features } from "@/components/scam-spotter/features";
-import { Hero } from "@/components/scam-spotter/hero";
-import { HowItWorks } from "@/components/scam-spotter/how-it-works";
-import { ResultsPlaceholder } from "@/components/scam-spotter/results-placeholder";
-import { SiteFooter } from "@/components/scam-spotter/site-footer";
-import { SiteHeader } from "@/components/scam-spotter/site-header";
-import { TrustIndicators } from "@/components/scam-spotter/trust-indicators";
-import { SECTION_IDS } from "@/data/scam-spotter";
+import { About } from "@/components/trust-lens/about";
+import { Analyzer } from "@/components/trust-lens/analyzer";
+import { Capabilities } from "@/components/trust-lens/capabilities";
+import { Hero } from "@/components/trust-lens/hero";
+import { HowItWorks } from "@/components/trust-lens/how-it-works";
+import { ResultsPlaceholder } from "@/components/trust-lens/results-placeholder";
+import { SiteFooter } from "@/components/trust-lens/site-footer";
+import { SiteHeader } from "@/components/trust-lens/site-header";
+import { TrustIndicators } from "@/components/trust-lens/trust-indicators";
+import { SECTION_IDS } from "@/data/trust-lens";
 import { motion } from "framer-motion";
 import { useCallback, useState } from "react";
 
 export default function Landing() {
-  // Tracks whether the visitor has asked for an analysis. Step 1 has no
-  // detection engine, so this only drives the "no analysis performed" notice.
+  // Tracks whether the visitor has asked for an analysis. The detection engine
+  // is not implemented yet, so this only drives the "no analysis" notice.
   const [analysisRequested, setAnalysisRequested] = useState(false);
 
   const handleAnalyzeRequest = useCallback(() => {
@@ -40,7 +40,7 @@ export default function Landing() {
         <Hero />
         <TrustIndicators />
         <HowItWorks />
-        <Features />
+        <Capabilities />
         <Analyzer onSubmit={handleAnalyzeRequest} />
         <ResultsPlaceholder requested={analysisRequested} />
         <About />

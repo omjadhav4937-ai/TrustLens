@@ -1,5 +1,5 @@
-import { Section, SectionHeading } from "@/components/scam-spotter/section";
-import { HOW_IT_WORKS_STEPS, SECTION_IDS } from "@/data/scam-spotter";
+import { Section, SectionHeading } from "@/components/trust-lens/section";
+import { HOW_IT_WORKS_STEPS, SECTION_IDS } from "@/data/trust-lens";
 
 export function HowItWorks() {
   return (
@@ -7,7 +7,7 @@ export function HowItWorks() {
       <SectionHeading
         eyebrow="How it works"
         title="Four steps from suspicion to a safe decision"
-        description="The flow is deliberately short. You stay in control of the message at every point."
+        description="The flow is deliberately short. You stay in control of your message at every point along the way."
       />
 
       <ol className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

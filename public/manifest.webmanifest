@@ -1,11 +1,11 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "TrustLens — Think Before You Tap.",
+  "short_name": "TrustLens",
+  "description": "Check a suspicious SMS, email, or chat message: the warning signs, the risk level, and the safer next step. Private by design.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#0e1524",
+  "theme_color": "#0e1524",
   "icons": [
     {
       "src": "/logo.svg",

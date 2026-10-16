@@ -43,7 +43,7 @@
 }
 
 /* CHANGE VALUES FOR THEME */
-/* Scam Spotter theme: deep navy surfaces with refined blue + cyan accents. */
+/* TrustLens theme: deep navy surfaces with refined blue + cyan accents. */
 :root {
   --radius: 0.75rem;
   --background: oklch(0.16 0.025 258);
@@ -126,7 +126,7 @@
   }
 }
 
-/* Scam Spotter layout helpers ------------------------------------------------- */
+/* TrustLens layout helpers ----------------------------------------------------- */
 
 html {
   scroll-behavior: smooth;
@@ -147,7 +147,7 @@ body {
 }
 
 /* Faint technical grid used behind the hero and analyzer sections. */
-.spotter-grid {
+.lens-grid {
   background-image:
     linear-gradient(
       to right,
@@ -169,7 +169,7 @@ body {
 }
 
 /* Restrained glass surface for the header and preview panels. */
-.spotter-glass {
+.lens-glass {
   background-color: color-mix(in oklab, var(--card) 72%, transparent);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);

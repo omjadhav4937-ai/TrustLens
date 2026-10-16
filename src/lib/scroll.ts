@@ -1,5 +1,5 @@
 /**
- * Scrolls to a section on the Scam Spotter landing page.
+ * Scrolls to a section on the TrustLens landing page.
  *
  * Anchor links keep a real `href` so they stay accessible and shareable; this
  * helper only upgrades the jump into a smooth scroll and respects the user's
