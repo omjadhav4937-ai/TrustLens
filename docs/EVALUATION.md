@@ -277,7 +277,7 @@ in this step; the dataset was not used to tune the rules.
 | `bun run evaluate:holdout` | exit 0; separate 50-case report |
 | `bun run evaluate:credential-proposal` | exit 0; simulated overlay, not production |
 | `bun run evaluate:credential-stress` | exit 0; separate 60-case stress report |
-| `bun test` | exit 0; 370 pass, 0 fail (13 files) |
+| `bun test` | exit 0; 366 pass, 0 fail (13 files) |
 | `bun run evaluate:multilingual` | exit 0; separate 60-case report |
 | `bunx tsc -b --noEmit` | exit 0 |
 | `bunx eslint src/lib/scam-detection/evaluation scripts/evaluate-detector.ts` | exit 0 |

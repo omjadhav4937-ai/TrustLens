@@ -204,6 +204,17 @@ test.describe("the reported partial overlap", () => {
   test("renders both findings with their documented evidence", async ({ page }) => {
     await analyze(page);
 
+    // The entire "What to do next" block is gone, not merely hidden: no
+    // heading, checklist, relevance label, divider or reporting controls.
+    const report = page.locator("#results");
+    // The heading is gone; `getByText` alone would also match the lowercase
+    // "read what to do next" sentence in the section description.
+    await expect(report.getByRole("heading", { name: "What to do next" })).toHaveCount(0);
+    await expect(report.getByText("Relevant to this message")).toHaveCount(0);
+    await expect(report.getByText("Reporting in India")).toHaveCount(0);
+    await expect(report.getByRole("checkbox")).toHaveCount(0);
+    await expect(report.getByRole("link", { name: /cybercrime\.gov\.in/ })).toHaveCount(0);
+
     for (const ruleId of ALL_RULES) {
       await expect(page.locator(`#results li[data-rule-id="${ruleId}"]`)).toHaveCount(1);
     }
@@ -887,6 +898,13 @@ test.describe("narrow viewport", () => {
 
   test("lays out the report without horizontal overflow", async ({ page }) => {
     await analyze(page);
+
+    // The removal holds at the narrow viewport too.
+    const report = page.locator("#results");
+    await expect(report.getByRole("heading", { name: "What to do next" })).toHaveCount(0);
+    await expect(report.getByText("Relevant to this message")).toHaveCount(0);
+    await expect(report.getByText("Reporting in India")).toHaveCount(0);
+    await expect(report.getByRole("checkbox")).toHaveCount(0);
 
     const overflow = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,

@@ -9,12 +9,7 @@ import { MessageInspector } from "@/components/trust-lens/message-inspector";
 import { ResultsExplorer } from "@/components/trust-lens/results-explorer";
 import { RiskOverview } from "@/components/trust-lens/risk-overview";
 import { RuleCoverage, RuleRow } from "@/components/trust-lens/rule-coverage";
-import { SafetyActions } from "@/components/trust-lens/safety-actions";
-import {
-  SCORE_CAVEAT,
-  SAMPLE_MESSAGE,
-  SAFETY_CHECKLIST_NOTE,
-} from "@/data/trust-lens";
+import { SCORE_CAVEAT, SAMPLE_MESSAGE } from "@/data/trust-lens";
 import {
   RULES,
   analyzeMessage,
@@ -1348,56 +1343,6 @@ describe("rule coverage", () => {
 });
 
 /* ------------------------------------------------------------------ */
-/* Safety actions                                                      */
-/* ------------------------------------------------------------------ */
-
-describe("safety actions", () => {
-  it("offers the standing actions plus the ones this message provoked", () => {
-    const html = render(<SafetyActions analysis={analyzeMessage(HIGH_RISK)} />);
-
-    // Standing advice, true of every message.
-    expect(html).toContain("I will not share an OTP");
-    expect(html).toContain("I will verify the request through");
-    // Actions this message provoked, each tied to a matched rule.
-    expect(html).toContain("I will not open a link I was not expecting");
-    expect(html).toContain("I will treat any request for a code, PIN or password");
-    expect(html).toContain("I will not pay a fee or hand over details");
-    expect(html).toContain("Relevant to this message");
-  });
-
-  it("omits the actions this message did not provoke", () => {
-    const html = render(<SafetyActions analysis={analyzeMessage(ORDINARY)} />);
-
-    expect(html).toContain("I will not share an OTP");
-    expect(html).not.toContain("I will not pay a fee or hand over details");
-    expect(html).not.toContain("Relevant to this message");
-  });
-
-  it("says plainly that ticks do not clear a message", () => {
-    const html = render(<SafetyActions analysis={analyzeMessage(HIGH_RISK)} />);
-    expect(html).toContain(escapeText(SAFETY_CHECKLIST_NOTE));
-    expect(html).toContain("Ticking them changes nothing about the score");
-  });
-
-  it("keeps the reporting resources and links only the official portal", () => {
-    const html = render(<SafetyActions analysis={analyzeMessage(HIGH_RISK)} />);
-    expect(html).toContain("cybercrime.gov.in");
-    expect(html).toContain("1930");
-    expect(html).toContain('href="https://www.cybercrime.gov.in/"');
-    expect(html).toContain('rel="noopener noreferrer"');
-    // Exactly one link, and it is not a URL taken from the message.
-    expect([...html.matchAll(/<a /g)].length).toBe(1);
-    expect(html).not.toContain("sbi-kyc-verify");
-  });
-
-  it("reuses the engine summary instead of a second verdict", () => {
-    const analysis = analyzeMessage(HIGH_RISK);
-    const html = render(<SafetyActions analysis={analysis} />);
-    expect(html).toContain(escapeText(analysis.summary));
-  });
-});
-
-/* ------------------------------------------------------------------ */
 /* 13. Empty states through the whole explorer                         */
 /* ------------------------------------------------------------------ */
 
@@ -1412,7 +1357,6 @@ describe("full explorer", () => {
       "Message inspector",
       "Links",
       "Rule coverage",
-      "What to do next",
     ]) {
       expect(html).toContain(heading);
     }
@@ -1423,6 +1367,16 @@ describe("full explorer", () => {
     // Cards start collapsed, so no card reveals its long-form content yet.
     expect(html).not.toContain("Show in message");
     expect(html).not.toContain(escapeText(analysis.findings[0].explanation));
+  });
+
+  it("omits the removed What to do next section", () => {
+    const html = render(<ResultsExplorer analysis={analyzeMessage(HIGH_RISK)} />);
+
+    expect(html).not.toContain("What to do next");
+    expect(html).not.toContain("Relevant to this message");
+    expect(html).not.toContain("Reporting in India");
+    expect(html).not.toContain("cybercrime.gov.in");
+    expect(html).not.toContain("role=\"checkbox\"");
   });
 
   it("renders a low-risk message without inventing evidence", () => {
@@ -1548,17 +1502,7 @@ describe("keyboard structure", () => {
     );
   });
 
-  it("wires every checkbox to a label", () => {
-    // Attribute order is not guaranteed, so read the id out of each tag.
-    const checkboxTags = [
-      ...html.matchAll(/<button[^>]*role="checkbox"[^>]*>/g),
-    ].map((match) => match[0]);
-
-    expect(checkboxTags.length).toBeGreaterThan(0);
-    for (const tag of checkboxTags) {
-      const id = /id="([^"]+)"/.exec(tag)?.[1] ?? "";
-      expect(id.length).toBeGreaterThan(0);
-      expect(html).toContain(`for="${id}"`);
-    }
+  it("no longer contains any checklist control", () => {
+    expect([...html.matchAll(/role="checkbox"/g)]).toHaveLength(0);
   });
 });

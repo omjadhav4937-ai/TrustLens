@@ -197,14 +197,15 @@ This is the business-model story, not a claim that the business is running. Say 
 
 ## 9. Show the safety guidance
 
-Scroll to the safety section and the checklist inside the report:
+Scroll to the safety section below the report:
 
-- Each matched finding contributes a specific action ("I will not share an OTP…", "I will
-  not open a link I was not expecting…"), not generic advice.
-- Ticking the boxes changes nothing about the score, and the panel says so — a completed
-  checklist does not make a message safe.
-- The reporting block names India's National Cyber Crime Reporting Portal and the **1930**
-  helpline, and opens the portal in a new tab with `rel="noopener noreferrer"`.
+- Its "How to read your result" list states the score's limits in plain language, so a
+  high score is never shown as proof of fraud.
+- Its "If a message looks suspicious" list gives concrete behaviour advice (verify
+  through official channels, never share an OTP or password, report quickly if money has
+  moved), and the reporting block names India's National Cyber Crime Reporting Portal
+  and the **1930** helpline, opening the portal in a new tab with
+  `rel="noopener noreferrer"`.
 - The analysis report and the footer both carry the same caveat: a high score does not
   prove fraud, and a low score does not prove safety.
 

@@ -13,7 +13,7 @@ about without a browser:
 src/lib/scam-detection/        presentation-free engine (no React, no DOM)
         │  analyzeMessage(text) -> ScamAnalysis
         ▼
-src/data/trust-lens.ts         product copy: labels, limitations, safety actions, sample
+src/data/trust-lens.ts         product copy: labels, limitations, safe-behaviour copy, sample
         │
         ▼
 src/components/trust-lens/     React rendering, interaction, evidence navigation
@@ -65,7 +65,7 @@ global state, so the same input always yields the same analysis (apart from
 | `src/lib/scam-detection/highlight.ts` | Segments, per-finding targets, navigation-failure classification |
 | `src/lib/scam-detection/index.ts` | Public surface of the engine |
 | `src/lib/scam-detection/evaluation/` | 100-case dataset, 50-case holdout, 60-case stress set, 60-case multilingual set, deterministic runners, integrity tests, credential proposal dry run (see [EVALUATION.md](EVALUATION.md), [HOLDOUT-EVALUATION.md](HOLDOUT-EVALUATION.md), [CREDENTIAL-RULE-PROPOSAL.md](CREDENTIAL-RULE-PROPOSAL.md), [CREDENTIAL-STRESS-TEST.md](CREDENTIAL-STRESS-TEST.md), [MULTILINGUAL-EVALUATION.md](MULTILINGUAL-EVALUATION.md)) |
-| `src/data/trust-lens.ts` | Copy, plans, API copy, `SAMPLE_MESSAGE`, limitations, safety actions, reporting details |
+| `src/data/trust-lens.ts` | Copy, plans, API copy, `SAMPLE_MESSAGE`, limitations, safe-behaviour copy, reporting details |
 | `src/components/trust-lens/` | Landing sections, analyzer, results, pricing, API, business model |
 | `src/pages/` | Route components (`Landing`, `Auth`, `Dashboard`, `NotFound`) |
 | `e2e/` | Playwright specs (`*.e2e.ts`) and generated screenshots |
@@ -171,7 +171,7 @@ wrong, fix the rule and say why in the commit.
 ## Testing
 
 ```bash
-bun test                                 # 370 tests, 13 files
+bun test                                 # 366 tests, 13 files
 bun run evaluate                         # 100-case detector evaluation (see EVALUATION.md)
 bun run evaluate:holdout                 # separate 50-case holdout (see HOLDOUT-EVALUATION.md)
 bun run evaluate:credential-proposal     # proposal-only dry run; never used by the app

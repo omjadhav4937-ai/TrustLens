@@ -3,7 +3,6 @@ import { LinkInspector } from "@/components/trust-lens/link-inspector";
 import { MessageInspector } from "@/components/trust-lens/message-inspector";
 import { RiskOverview } from "@/components/trust-lens/risk-overview";
 import { RuleCoverage } from "@/components/trust-lens/rule-coverage";
-import { SafetyActions } from "@/components/trust-lens/safety-actions";
 import {
   RULES,
   buildHighlightPlan,
@@ -264,8 +263,6 @@ export function ResultsExplorer({ analysis }: { analysis: ScamAnalysis }) {
           <RuleCoverage analysis={analysis} />
         </div>
       </div>
-
-      <SafetyActions analysis={analysis} />
     </div>
   );
 }

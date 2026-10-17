@@ -205,7 +205,7 @@ computed or claimed.**
 | --- | --- |
 | `bun run evaluate:holdout` | exit 0; 50 cases, 17 predicted positive |
 | `bun test src/lib/scam-detection/evaluation/holdout` | exit 0; 16 pass, 0 fail |
-| `bun test` | exit 0; 370 pass, 0 fail (13 files) |
+| `bun test` | exit 0; 366 pass, 0 fail (13 files) |
 | `bun run evaluate` | exit 0; original report unchanged |
 | `bunx tsc -b --noEmit` | exit 0 |
 | `bunx eslint src/lib/scam-detection/evaluation scripts` | exit 0 |

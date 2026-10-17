@@ -35,8 +35,8 @@ reasoning can be read, checked, and argued with.
 - **Builds a 0–100 risk score** from rule weights, shown with its own limitations.
 - **Lists every configured rule and what it decided**, including rules that did not
   match, so a clean result is never presented as a clearance.
-- **Offers a safety checklist and reporting guidance** for India (National Cyber Crime
-  Reporting Portal, helpline 1930).
+- **Offers reporting guidance** for India (National Cyber Crime Reporting Portal,
+  helpline 1930) in its safety section.
 - **Loads a bundled fictional sample** so the analyzer can be tried without pasting
   anything personal.
 
@@ -146,7 +146,7 @@ bunx tsc -p tsconfig.e2e.json --noEmit      # browser-suite type-check
 bun run lint                                # ESLint
 ```
 
-**Unit and component tests** — 370 tests in 13 files, covering the rule engine, scoring,
+**Unit and component tests** — 366 tests in 13 files, covering the rule engine, scoring,
 link heuristics, overlap-aware highlighting, false-positive behaviour on benign
 messages, multilingual detection and language limits, server-rendered component output,
 the labelled evaluation datasets and the proposed-plan UI. The historical 100-case set,

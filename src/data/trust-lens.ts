@@ -121,7 +121,7 @@ export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     icon: ArrowRightCircle,
     title: "Take the safe next step",
     description:
-      "Leave with a short checklist: what not to tap, who to verify with, and how to report the message.",
+      "Leave with clear guidance: what not to tap, who to verify with, and how to report the message.",
     note: "No jargon, one action at a time",
   },
 ];
@@ -384,70 +384,6 @@ export const COVERAGE_STATUS_HELP: CoverageStatusHelp[] = [
       "The rule was evaluated but failed, so it contributed nothing. Its warning signs are not covered by this result.",
   },
 ];
-
-/**
- * The actions offered after a check.
- *
- * `triggeredBy` lists the rule ids whose presence makes an action especially
- * relevant. An empty list means the action always applies, because there is no
- * message for which "do not share an OTP" is bad advice.
- */
-export interface SafetyAction {
-  id: string;
-  text: string;
-  triggeredBy: string[];
-}
-
-export const SAFETY_ACTIONS: SafetyAction[] = [
-  {
-    id: "never-share",
-    text: "I will not share an OTP, password, PIN or card detail with anyone, whoever the message claims to be from.",
-    triggeredBy: [],
-  },
-  {
-    id: "no-unexpected-links",
-    text: "I will not open a link I was not expecting, even when it names a service I really use.",
-    triggeredBy: ["suspicious-link"],
-  },
-  {
-    id: "end-credential-conversations",
-    text: "I will treat any request for a code, PIN or password as a scam attempt and end the conversation there.",
-    triggeredBy: ["credential-request"],
-  },
-  {
-    id: "check-account-myself",
-    text: "I will not act on a threat to block an account from inside the message. I will open the organisation's own app and check for myself.",
-    triggeredBy: ["account-threat"],
-  },
-  {
-    id: "no-prize-fee",
-    text: "I will not pay a fee or hand over details to release a prize or reward I never entered for.",
-    triggeredBy: ["prize-bait"],
-  },
-  {
-    id: "ignore-the-deadline",
-    text: "I will ignore the deadline in the message and take as long as I need to verify it.",
-    triggeredBy: ["urgency-pressure"],
-  },
-  {
-    id: "verify-officially",
-    text: "I will verify the request through the organisation's official app, or a contact I looked up myself — never through a link or number in the message.",
-    triggeredBy: [],
-  },
-  {
-    id: "report-if-money-moved",
-    text: "If money has already left my account, I will report it straight away — a fast report gives the best chance of freezing the transfer.",
-    triggeredBy: [],
-  },
-];
-
-/** Shown with the checklist so ticking boxes is never read as clearing a message. */
-export const SAFETY_CHECKLIST_NOTE =
-  "These are reminders you can work through, not a verdict. Ticking them changes nothing about the score, and a completed list does not make a message safe.";
-
-/** Shown when nothing was detected, so the panel still refuses to reassure. */
-export const SAFETY_NO_MATCH_NOTE =
-  "No configured warning sign matched this message. Keep treating unexpected messages with care, and verify before you act on anything that asks for money or details.";
 
 /* ------------------------------------------------------------------ */
 /* Proposed plans and business model                                   */
