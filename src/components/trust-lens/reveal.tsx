@@ -50,7 +50,10 @@ export function Reveal({
       className={className}
       initial={{ opacity: 0, y: distance }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.2 }}
+      // "some" rather than a fraction: `amount` is measured against the
+      // element, so a panel taller than five viewports could never reach a
+      // 0.2 threshold and would stay invisible for good on a phone.
+      viewport={{ once: true, amount: "some" }}
       transition={{ duration: 0.5, delay, ease: EASE }}
     >
       {children}
