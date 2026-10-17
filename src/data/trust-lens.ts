@@ -15,7 +15,10 @@ import {
 } from "lucide-react";
 
 export const PRODUCT_NAME = "TrustLens";
-export const TAGLINE = "Think Before You Tap.";
+export const TAGLINE = "See the Risk Behind Every Message.";
+/** The hero headline, split so the tail can carry the accent gradient. */
+export const HEADLINE_LEAD = "See the Risk";
+export const HEADLINE_ACCENT = "Behind Every Message.";
 
 export interface NavLink {
   label: string;
@@ -72,6 +75,8 @@ export interface HowItWorksStep {
   icon: LucideIcon;
   title: string;
   description: string;
+  /** Short remark shown as the card's hover emphasis. */
+  note: string;
 }
 
 export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
@@ -81,6 +86,7 @@ export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     title: "Paste a suspicious message",
     description:
       "Bring in the full text of an SMS, email, or chat message that does not feel right. Nothing is sent anywhere.",
+    note: "Takes a few seconds",
   },
   {
     step: "02",
@@ -88,6 +94,7 @@ export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     title: "Spot the warning signs",
     description:
       "TrustLens checks for pressure tactics, spoofed links, OTP requests, and unexpected payment asks.",
+    note: "Every check is a written rule",
   },
   {
     step: "03",
@@ -95,6 +102,7 @@ export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     title: "Understand the risk level",
     description:
       "Each matched rule explains itself and adds to a clear Low, Medium, or High risk level you can reason about.",
+    note: "The reasoning is always shown",
   },
   {
     step: "04",
@@ -102,6 +110,7 @@ export const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     title: "Take the safe next step",
     description:
       "Leave with a short checklist: what not to tap, who to verify with, and how to report the message.",
+    note: "No jargon, one action at a time",
   },
 ];
 
@@ -110,8 +119,13 @@ export type CapabilityStatus = "available" | "planned";
 export interface Capability {
   icon: LucideIcon;
   title: string;
+  /** Front face: what the capability is. */
   description: string;
   status: CapabilityStatus;
+  /** Back face: why it matters. */
+  detail: string;
+  /** Back face: three short benefits. */
+  points: string[];
 }
 
 /** What people can do with TrustLens, and how far each one has shipped. */
@@ -122,6 +136,13 @@ export const CAPABILITIES: Capability[] = [
     description:
       "Bring the full text of anything you are unsure about into one calm, uncluttered workspace.",
     status: "available",
+    detail:
+      "Scam messages usually hide the trap in a single line, so a summary is not enough. Pasting the whole message keeps the context intact and lets every warning sign be judged in the place it actually appeared.",
+    points: [
+      "Accepts up to 1,500 characters of any message",
+      "Nothing leaves your browser tab",
+      "You keep control of the text at all times",
+    ],
   },
   {
     icon: MessagesSquare,
@@ -129,6 +150,13 @@ export const CAPABILITIES: Capability[] = [
     description:
       "One analyzer for every channel, so you do not need a separate tool for each app you use.",
     status: "available",
+    detail:
+      "Fraud arrives through whichever channel you trust most. TrustLens does not mind where a message came from, because the warning signs look the same whether it was delivered by text, email, or a messaging app.",
+    points: [
+      "One workflow instead of several tools",
+      "No retyping or shortening the message",
+      "Consistent treatment across every channel",
+    ],
   },
   {
     icon: Sparkles,
@@ -136,6 +164,13 @@ export const CAPABILITIES: Capability[] = [
     description:
       "Load a fictional bank KYC scam and see how a suspicious message is written to rush you.",
     status: "available",
+    detail:
+      "The sample is a fictional bank KYC scam written in the style of the messages people really receive. Loading it lets you get comfortable with the analyzer before you bring it a message that matters.",
+    points: [
+      "Entirely fictional, so nothing personal is involved",
+      "Demonstrates urgency, a lookalike link, and an OTP request",
+      "Replaced in one click once you add your own message",
+    ],
   },
   {
     icon: RotateCcw,
@@ -143,6 +178,13 @@ export const CAPABILITIES: Capability[] = [
     description:
       "Reset the analyzer in a single click and move straight on to the next message.",
     status: "available",
+    detail:
+      "Suspicious messages rarely arrive one at a time. Clear resets the text and any validation message, so the next check starts from a clean slate rather than an edited version of the last one.",
+    points: [
+      "Empties the input and clears any warning",
+      "Disabled while the input is already empty",
+      "Reachable by keyboard like every other control",
+    ],
   },
   {
     icon: EyeOff,
@@ -150,6 +192,13 @@ export const CAPABILITIES: Capability[] = [
     description:
       "Your message is handled inside the browser and is never uploaded, logged, or stored.",
     status: "available",
+    detail:
+      "The messages worth checking are exactly the ones that tend to contain your name, account details, and links. TrustLens is built so that text stays on the page you are reading it on, and disappears when you close the tab.",
+    points: [
+      "No account, sign-up, or profile",
+      "No upload and no server-side storage",
+      "Close the tab and the message is gone",
+    ],
   },
   {
     icon: SlidersHorizontal,
@@ -157,6 +206,13 @@ export const CAPABILITIES: Capability[] = [
     description:
       "Every check ends in Low, Medium, or High, with the reasons behind it shown alongside.",
     status: "planned",
+    detail:
+      "One word is easier to act on than a wall of detail. Each finding contributes to a single overall level, and the findings that produced it sit right beside it, so the level is never a mystery you have to take on faith.",
+    points: [
+      "Low, Medium, or High — never a vague warning",
+      "The findings behind the level are always visible",
+      "Presented as possible warning signs, not a verdict",
+    ],
   },
   {
     icon: Highlighter,
@@ -164,6 +220,13 @@ export const CAPABILITIES: Capability[] = [
     description:
       "Suspicious phrases are marked inside your own message and explained one at a time.",
     status: "planned",
+    detail:
+      "Seeing the suspicious phrase inside your own message is what makes a warning stick. TrustLens marks the exact text it reacted to, then explains in one sentence why that phrase is worth a second look.",
+    points: [
+      "Matches stay highlighted in their original context",
+      "A plain-language explanation for each match",
+      "Enough detail for you to judge the finding yourself",
+    ],
   },
   {
     icon: Link2,
@@ -171,6 +234,13 @@ export const CAPABILITIES: Capability[] = [
     description:
       "Shortened, misspelled, and imitation domains are called out before you tap them.",
     status: "planned",
+    detail:
+      "Most scams end with a single tap. TrustLens is being built to look at the destination first: shortened links, brand names with a letter swapped, and domains that imitate a bank or a courier closely enough to pass a glance.",
+    points: [
+      "Shortened and mismatched links flagged",
+      "Lookalike domains compared with the genuine name",
+      "The real destination is shown before you decide",
+    ],
   },
   {
     icon: ListChecks,
@@ -178,6 +248,13 @@ export const CAPABILITIES: Capability[] = [
     description:
       "Findings turn into specific actions: verify through official channels, never share an OTP, and report the message.",
     status: "planned",
+    detail:
+      "Knowing a message is risky is only half of the job. Every finding ends with the specific action to take, so you finish a check knowing exactly what to do next rather than simply feeling uneasy.",
+    points: [
+      "One concrete action for each finding",
+      "Reminders to verify through official channels",
+      "Guidance on reporting the message afterwards",
+    ],
   },
 ];
 

@@ -175,3 +175,145 @@ body {
   backdrop-filter: blur(14px);
 }
 
+/* Softer translucent surface for section panels and result slots. */
+.lens-panel {
+  background-color: color-mix(in oklab, var(--card) 74%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Restrained glow used by primary calls to action. */
+.lens-cta-glow {
+  box-shadow: 0 10px 30px -14px color-mix(in oklab, var(--primary) 70%, transparent);
+  transition: box-shadow 300ms ease, background-color 200ms ease;
+}
+
+.lens-cta-glow:hover {
+  box-shadow: 0 16px 40px -14px color-mix(in oklab, var(--primary) 85%, transparent);
+}
+
+/* Soft focus halo for the analyzer input. Kept as plain CSS because Tailwind's
+   arbitrary-value shadow parser rewrites `color-mix()` colours. Uses outline so
+   it never competes with the ring's box-shadow. */
+.lens-input-glow:focus-visible {
+  outline: 6px solid color-mix(in oklab, var(--primary) 14%, transparent);
+  outline-offset: 1px;
+}
+
+/* Restrained press feedback for every button in the app. Driven off the
+   existing `data-slot="button"` attribute so the shared primitive is untouched. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot="button"]:not(:disabled):active {
+    transform: translateY(1px) scale(0.99);
+  }
+}
+
+/* --- 3D flip cards --------------------------------------------------------- */
+
+.flip-card {
+  position: relative;
+  height: 100%;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.flip-card-stage {
+  height: 100%;
+  perspective: 1400px;
+}
+
+.flip-card-inner {
+  display: grid;
+  grid-template-rows: 1fr;
+  height: 100%;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+  transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Both faces share a single grid cell, so the card is always as tall as its
+   longer side. Nothing is clipped and the faces can never overlap. */
+.flip-card-face {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+  background-color: color-mix(in oklab, var(--card) 88%, transparent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transition: border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+}
+
+/* Desktop pointers preview the back face on hover, after a short dwell so that
+   sweeping the cursor across the grid does not flip everything it touches. */
+@media (hover: hover) and (pointer: fine) {
+  .flip-card:hover {
+    transform: translateY(-3px);
+  }
+
+  .flip-card:hover .flip-card-inner {
+    transform: rotateY(180deg);
+    transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1) 90ms;
+  }
+}
+
+/* Explicit activation (tap, click, Enter or Space) pins the flip in place. */
+.flip-card[data-flipped="true"] {
+  transform: translateY(-3px);
+}
+
+.flip-card[data-flipped="true"] .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card:hover .flip-card-face,
+.flip-card:focus-within .flip-card-face,
+.flip-card[data-flipped="true"] .flip-card-face {
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+  box-shadow:
+    0 20px 44px -26px color-mix(in oklab, var(--primary) 75%, transparent),
+    0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+/* Full-card toggle: valid button markup, a comfortable touch target, and the
+   only focus stop the card needs. */
+.flip-card-trigger {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  outline: none;
+}
+
+.flip-card-trigger:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--background),
+    0 0 0 4px var(--ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No rotation animation, and no flipping just because a pointer rests on a
+     card. The back face is still reachable by activating the card. */
+  .flip-card,
+  .flip-card-inner {
+    transition: none;
+  }
+
+  .flip-card:hover,
+  .flip-card[data-flipped="true"] {
+    transform: none;
+  }
+
+  .flip-card:hover .flip-card-inner {
+    transform: none;
+  }
+}
+

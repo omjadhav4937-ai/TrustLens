@@ -25,7 +25,12 @@ export function Section({
   );
 }
 
-/** Eyebrow + title + description block used above most sections. */
+/**
+ * Eyebrow + title + description block used above most sections.
+ *
+ * Intentionally motion-free: the sections wrap it in `<Reveal>` themselves, so
+ * the entrance animation lives in one place rather than two.
+ */
 export function SectionHeading({
   eyebrow,
   title,
@@ -47,8 +52,16 @@ export function SectionHeading({
       <h2 className="mt-4 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
         {title}
       </h2>
+      <span
+        className="mx-auto mt-5 block h-px w-24 rounded-full"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, transparent, color-mix(in oklab, var(--primary) 70%, transparent), transparent)",
+        }}
+        aria-hidden="true"
+      />
       {description && (
-        <p className="mt-4 text-pretty text-base leading-relaxed text-muted-foreground">
+        <p className="mt-5 text-pretty text-base leading-relaxed text-muted-foreground">
           {description}
         </p>
       )}

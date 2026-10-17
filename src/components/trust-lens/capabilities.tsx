@@ -1,13 +1,114 @@
+import { FlipCard } from "@/components/trust-lens/flip-card";
+import { Reveal } from "@/components/trust-lens/reveal";
 import { Section, SectionHeading } from "@/components/trust-lens/section";
 import { Badge } from "@/components/ui/badge";
-import { CAPABILITIES, SECTION_IDS } from "@/data/trust-lens";
+import { CAPABILITIES, SECTION_IDS, type Capability } from "@/data/trust-lens";
 import { cn } from "@/lib/utils";
-import { CircleCheck, CircleDashed } from "lucide-react";
+import { Check, CircleCheck, CircleDashed, RotateCw } from "lucide-react";
 
 const AVAILABLE_COUNT = CAPABILITIES.filter(
   (capability) => capability.status === "available",
 ).length;
 const PLANNED_COUNT = CAPABILITIES.length - AVAILABLE_COUNT;
+
+function StatusBadge({ status }: { status: Capability["status"] }) {
+  const isAvailable = status === "available";
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "gap-1 border-border/70 text-[0.625rem] font-semibold uppercase tracking-[0.12em]",
+        isAvailable
+          ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-100"
+          : "text-muted-foreground",
+      )}
+    >
+      {isAvailable ? (
+        <CircleCheck className="size-3" aria-hidden="true" />
+      ) : (
+        <CircleDashed className="size-3" aria-hidden="true" />
+      )}
+      {isAvailable ? "Available now" : "Planned"}
+    </Badge>
+  );
+}
+
+function CapabilityCard({ capability }: { capability: Capability }) {
+  const isAvailable = capability.status === "available";
+  const Icon = capability.icon;
+
+  return (
+    <FlipCard
+      title={capability.title}
+      front={
+        <div className="flex h-full flex-col p-6">
+          <div className="flex items-start justify-between gap-3">
+            <span
+              className={cn(
+                "flex size-10 shrink-0 items-center justify-center rounded-xl border",
+                isAvailable
+                  ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                  : "border-border/70 bg-secondary/70 text-primary",
+              )}
+              aria-hidden="true"
+            >
+              <Icon className="size-5" />
+            </span>
+            <StatusBadge status={capability.status} />
+          </div>
+
+          <h3 className="mt-5 text-base font-semibold tracking-tight">
+            {capability.title}
+          </h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {capability.description}
+          </p>
+
+          <span
+            className="mt-5 flex items-center gap-1.5 text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-muted-foreground/80"
+            aria-hidden="true"
+          >
+            <RotateCw className="size-3" />
+            Details
+          </span>
+        </div>
+      }
+      back={
+        <div className="flex h-full flex-col p-6">
+          <div className="flex items-start justify-between gap-3">
+            <span className="text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-primary">
+              Why it matters
+            </span>
+            <StatusBadge status={capability.status} />
+          </div>
+
+          <h3 className="mt-4 text-base font-semibold tracking-tight">
+            {capability.title}
+          </h3>
+          <p className="mt-2 text-[0.8125rem] leading-relaxed text-muted-foreground">
+            {capability.detail}
+          </p>
+
+          <ul className="mt-4 space-y-2">
+            {capability.points.map((point) => (
+              <li key={point} className="flex gap-2.5">
+                <span
+                  className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary"
+                  aria-hidden="true"
+                >
+                  <Check className="size-2.5" strokeWidth={3} />
+                </span>
+                <span className="text-[0.8125rem] leading-snug text-foreground/90">
+                  {point}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      }
+    />
+  );
+}
 
 export function Capabilities() {
   return (
@@ -15,75 +116,36 @@ export function Capabilities() {
       id={SECTION_IDS.capabilities}
       className="border-y border-border/60 bg-card/40"
     >
-      <SectionHeading
-        eyebrow="What you can do"
-        title="Everything TrustLens is being built to handle"
-        description={`${AVAILABLE_COUNT} capabilities work today and ${PLANNED_COUNT} are on the way. Every card tells you exactly where it stands, so nothing is promised that is not there yet.`}
-      />
+      <Reveal>
+        <SectionHeading
+          eyebrow="What you can do"
+          title="Everything TrustLens is being built to handle"
+          description={`${AVAILABLE_COUNT} capabilities work today and ${PLANNED_COUNT} are on the way. Turn any card over for the detail behind it, and check the badge to see where it stands.`}
+        />
+      </Reveal>
 
       <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {CAPABILITIES.map((capability) => {
-          const isAvailable = capability.status === "available";
-          return (
-            <article
-              key={capability.title}
-              className={cn(
-                "flex flex-col rounded-2xl border bg-card/70 p-6 transition-colors",
-                isAvailable
-                  ? "border-emerald-400/30 hover:border-emerald-400/50"
-                  : "border-border/70 hover:border-primary/40",
-              )}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span
-                  className={cn(
-                    "flex size-10 items-center justify-center rounded-xl border",
-                    isAvailable
-                      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-                      : "border-border/70 bg-secondary/70 text-primary",
-                  )}
-                  aria-hidden="true"
-                >
-                  <capability.icon className="size-5" />
-                </span>
-
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "gap-1 border-border/70 text-[0.625rem] font-semibold uppercase tracking-[0.12em]",
-                    isAvailable
-                      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-100"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {isAvailable ? (
-                    <CircleCheck className="size-3" aria-hidden="true" />
-                  ) : (
-                    <CircleDashed className="size-3" aria-hidden="true" />
-                  )}
-                  {isAvailable ? "Available now" : "Planned"}
-                </Badge>
-              </div>
-
-              <h3 className="mt-5 text-base font-semibold tracking-tight">
-                {capability.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {capability.description}
-              </p>
-            </article>
-          );
-        })}
+        {CAPABILITIES.map((capability, index) => (
+          <Reveal
+            key={capability.title}
+            className="h-full"
+            delay={Math.min(index, 5) * 0.05}
+          >
+            <CapabilityCard capability={capability} />
+          </Reveal>
+        ))}
       </div>
 
-      <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-muted-foreground">
-        <span className="font-semibold text-foreground">Available today:</span>{" "}
-        the analyzer itself, the sample message, clearing the input, and
-        browser-only processing.{" "}
-        <span className="font-semibold text-foreground">Coming next:</span> the
-        detection engine that produces the risk level, the highlighted warning
-        signs, the link and lookalike-domain checks, and the safe next steps.
-      </p>
+      <Reveal>
+        <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-muted-foreground">
+          <span className="font-semibold text-foreground">Available today:</span>{" "}
+          the analyzer itself, the sample message, clearing the input, and
+          browser-only processing.{" "}
+          <span className="font-semibold text-foreground">Coming next:</span> the
+          detection engine that produces the risk level, the highlighted warning
+          signs, the link and lookalike-domain checks, and the safe next steps.
+        </p>
+      </Reveal>
     </Section>
   );
 }

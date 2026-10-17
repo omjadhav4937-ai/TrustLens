@@ -1,8 +1,14 @@
+import { Reveal } from "@/components/trust-lens/reveal";
 import { Button } from "@/components/ui/button";
-import { DEMO_WARNING_LABELS, SECTION_IDS } from "@/data/trust-lens";
+import {
+  DEMO_WARNING_LABELS,
+  HEADLINE_ACCENT,
+  HEADLINE_LEAD,
+  SECTION_IDS,
+} from "@/data/trust-lens";
 import { scrollToSection } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Link2, ShieldQuestion, Smartphone } from "lucide-react";
+import { AlertTriangle, ArrowRight, Link2, ShieldQuestion, Smartphone } from "lucide-react";
 
 const WARNING_STYLES = [
   "border-amber-400/30 bg-amber-400/10 text-amber-100",
@@ -27,14 +33,14 @@ export function Hero() {
 
       <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:px-8">
         {/* Copy column */}
-        <div className="flex flex-col items-start">
+        <Reveal mode="mount" className="flex flex-col items-start">
           <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-secondary/60 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
             Privacy-first scam detection
           </span>
 
-          <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-balance sm:text-5xl lg:text-6xl">
-            Think Before{" "}
+          <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-balance sm:text-5xl lg:text-[3.4rem]">
+            {HEADLINE_LEAD}{" "}
             <span
               style={{
                 backgroundImage:
@@ -44,7 +50,7 @@ export function Hero() {
                 color: "transparent",
               }}
             >
-              You Tap.
+              {HEADLINE_ACCENT}
             </span>
           </h1>
 
@@ -55,7 +61,7 @@ export function Hero() {
           </p>
 
           <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-            <Button asChild size="lg">
+            <Button asChild size="lg" className="lens-cta-glow">
               <a
                 href={`#${SECTION_IDS.analyzer}`}
                 onClick={(event) => {
@@ -64,6 +70,7 @@ export function Hero() {
                 }}
               >
                 Analyze a Message
+                <ArrowRight className="size-4" aria-hidden="true" />
               </a>
             </Button>
             <Button asChild size="lg" variant="outline">
@@ -82,11 +89,11 @@ export function Hero() {
           <p className="mt-5 text-sm text-muted-foreground">
             No sign-up. Nothing you paste is uploaded or stored.
           </p>
-        </div>
+        </Reveal>
 
         {/* Demo preview card */}
-        <div className="relative w-full">
-          <div className="relative rounded-3xl border border-border/80 bg-card/70 p-2 shadow-2xl backdrop-blur-sm">
+        <Reveal mode="mount" delay={0.12} distance={20} className="relative w-full">
+          <div className="relative rounded-3xl border border-border/80 lens-panel p-2 shadow-2xl">
             <div className="rounded-2xl border border-border/60 bg-background/60 p-5 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[0.625rem] font-bold uppercase tracking-[0.18em] text-primary">
@@ -163,7 +170,7 @@ export function Hero() {
               </p>
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
