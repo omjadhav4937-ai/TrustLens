@@ -7,7 +7,7 @@ message, explains the scam warning signs it recognises, highlights the evidence 
 your own text, and suggests safer next steps. It runs entirely in the browser, with
 no account, no upload, and no server-side storage of the message.
 
-Built for **SETU 2026, Problem Statement PS-01** by Team One Piece.
+Built for **SETU 2026, Problem Statement PS-01** by Team Perpetual.
 
 ---
 

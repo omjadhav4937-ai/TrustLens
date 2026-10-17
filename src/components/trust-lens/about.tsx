@@ -7,7 +7,7 @@ const FACTS = [
   {
     icon: Users,
     label: "Team",
-    value: "One Piece",
+    value: "Perpetual",
   },
   {
     icon: Target,
@@ -28,7 +28,7 @@ export function About() {
         <SectionHeading
           eyebrow="About TrustLens"
           title="A student-built tool with a serious purpose"
-          description="TrustLens was created for SETU 2026, problem statement PS-01, by Team One Piece. It is a college project rather than a commercial product, and it exists to make the warning signs of a fraudulent message easier to see."
+          description="TrustLens was created for SETU 2026, problem statement PS-01, by Team Perpetual. It is a college project rather than a commercial product, and it exists to make the warning signs of a fraudulent message easier to see."
         />
       </Reveal>
 

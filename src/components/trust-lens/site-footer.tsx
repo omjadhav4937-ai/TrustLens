@@ -50,7 +50,7 @@ export function SiteFooter() {
                 Project
               </h2>
               <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                <li>Team One Piece</li>
+                <li>Team Perpetual</li>
                 <li>SETU 2026 · PS-01</li>
                 <li>
                   Shri Vile Parle Kelavani Mandal's Institute of Technology,
@@ -77,7 +77,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-8 flex flex-col gap-2 border-t border-border/60 pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} TrustLens · Team One Piece</p>
+          <p>© {new Date().getFullYear()} TrustLens · Team Perpetual</p>
           <p>Built for SETU 2026, Problem Statement PS-01</p>
         </div>
       </div>
