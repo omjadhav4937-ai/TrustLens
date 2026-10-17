@@ -166,6 +166,34 @@ async function assertNoPageErrors(errors: string[]) {
   expect(errors, `uncaught page errors: ${errors.join(" | ")}`).toEqual([]);
 }
 
+/* --------------------------------------------------------------- privacy */
+
+test.describe("privacy", () => {
+  test.beforeEach(() => {
+    test.skip(test.info().project.name !== "desktop", "desktop project only");
+  });
+
+  test("never transmits the analysed message", async ({ page }) => {
+    // A unique marker so an echo of the text is unmistakable in any payload.
+    const token = "ZXQPRIVACYTOKEN9137";
+    const payloads: string[] = [];
+    page.on("request", (request) => {
+      payloads.push(request.url());
+      const body = request.postData();
+      if (body) payloads.push(body);
+    });
+    page.on("websocket", (socket) => {
+      socket.on("framesent", (frame) => payloads.push(String(frame.payload)));
+    });
+
+    await analyze(page, `${token} ${MESSAGE}`);
+
+    // The probe has to have seen traffic, or "nothing leaked" is meaningless.
+    expect(payloads.length).toBeGreaterThan(0);
+    expect(payloads.filter((payload) => payload.includes(token))).toEqual([]);
+  });
+});
+
 /* ------------------------------------------------- the reported overlap */
 
 test.describe("the reported partial overlap", () => {

@@ -1,293 +1,248 @@
-## Overview
+# TrustLens
 
-This project uses the following tech stack:
-- Vite
-- Typescript
-- React Router v7 (all imports from `react-router` instead of `react-router-dom`)
-- React 19 (for frontend components)
-- Tailwind v4 (for styling)
-- Shadcn UI (for UI components library)
-- Lucide Icons (for icons)
-- Convex (for backend & database)
-- Convex Auth (for authentication)
-- Framer Motion (for animations)
-- Three js (for 3d models)
+**See the Risk Behind Every Message.**
 
-All relevant files live in the 'src' directory.
+TrustLens is a client-side prototype that reviews a suspicious SMS, email, or chat
+message, explains the scam warning signs it recognises, highlights the evidence in
+your own text, and suggests safer next steps. It runs entirely in the browser, with
+no account, no upload, and no server-side storage of the message.
 
-Use bun for the package manager.
+Built for **SETU 2026, Problem Statement PS-01** by Team One Piece.
 
-## Setup
+---
 
-This project is set up already and running on a cloud environment, as well as a convex development in the sandbox.
+## The problem
 
-## Environment Variables
+Fraud arrives inside ordinary-looking messages: a bank warning that your account
+will be blocked, a delivery notice with a tracking link, a job offer, a prize you
+never entered for. These messages work by creating urgency and by asking you to act
+on a link or a code before you have time to think.
 
-The project is set up with project specific CONVEX_DEPLOYMENT and VITE_CONVEX_URL environment variables on the client side.
+Most people have no quick way to ask *"what exactly is suspicious here?"* TrustLens
+answers that question with written rules instead of an opaque verdict, so the
+reasoning can be read, checked, and argued with.
 
-The convex server has a separate set of environment variables that are accessible by the convex backend.
+## What it does
 
-Currently, these variables include auth-specific keys: JWKS, JWT_PRIVATE_KEY, and SITE_URL.
+- **Analyses pasted messages** of up to 1,500 characters, from any channel.
+- **Names the warning signs** it recognised, with the exact text that triggered each one.
+- **Explains each match** in plain language and gives one concrete next step.
+- **Highlights the evidence** inside the original message — including the awkward case
+  where two findings overlap, so the shared text and the remaining evidence stay
+  distinguishable.
+- **Builds a 0–100 risk score** from rule weights, shown with its own limitations.
+- **Lists every configured rule and what it decided**, including rules that did not
+  match, so a clean result is never presented as a clearance.
+- **Offers a safety checklist and reporting guidance** for India (National Cyber Crime
+  Reporting Portal, helpline 1930).
+- **Loads a bundled fictional sample** so the analyzer can be tried without pasting
+  anything personal.
 
+## How the analysis works
 
-# Using Authentication (Important!)
+The engine is deterministic and rule-based. There is no model, no training data, and
+no lookup against a URL reputation service.
 
-You must follow these conventions when using authentication.
+1. **Normalise** the text (whitespace and case) while keeping offsets aligned to the
+   original message, so highlights land on the characters the user actually typed.
+2. **Extract URLs** and run structural checks on each one: hostname and TLD shape,
+   brand-lookalike comparison, hyphenation, and shortener patterns. These read the
+   address string only; no link is ever opened or requested.
+3. **Evaluate five rules**, each a pure function over the normalised text and the
+   extracted links:
 
-## Auth is already set up.
+   | Rule | What it looks for | Weight |
+   | --- | --- | --- |
+   | `credential-request` | A request for an OTP, password, PIN or card detail | 40 |
+   | `suspicious-link` | A link or link-based call to action that looks deceptive | 25 |
+   | `urgency-pressure` | Deadlines and pressure to act immediately | 20 |
+   | `prize-bait` | A prize, reward or gift that asks you to claim it | 20 |
+   | `account-threat` | A threat to block, suspend or close an account | 15 |
 
-All convex authentication functions are already set up. The auth currently uses email OTP and anonymous users, but can support more.
+4. **Score** by adding the weights of matched rules once each, capped at 100. The
+   uncapped total is kept, so a capped score can be explained rather than hidden.
+   Risk bands: **Low** below 30, **Medium** from 30, **High** from 60.
+5. **Place the evidence** in the message. Where two findings overlap, one mark owns the
+   shared characters and the other finding's uncovered evidence is outlined separately;
+   the interface says which finding owns what.
 
-The email OTP configuration is defined in `src/convex/auth/emailOtp.ts`. DO NOT MODIFY THIS FILE.
+A rule that never ran is reported as *not evaluated*, which is deliberately different
+from *not matched*.
 
-Also, DO NOT MODIFY THESE AUTH FILES: `src/convex/auth.config.ts` and `src/convex/auth.ts`.
+## Technology
 
-## Using Convex Auth on the backend
+The stack below reflects the actual dependencies in `package.json`.
 
-On the `src/convex/users.ts` file, you can use the `getCurrentUser` function to get the current user's data.
+- **React 19** + **TypeScript** (~5.9), bundled by **Vite 7**
+- **Tailwind CSS v4** (`@tailwindcss/vite`) with shadcn/ui components on Radix primitives
+- **Framer Motion** for motion, with reduced-motion fallbacks
+- **lucide-react** icons, **sonner** toasts
+- **React Router 7** (`react-router`)
+- **Playwright** (`@playwright/test`) for the browser test suite
+- **Bun** as package manager and unit-test runner
+- **Convex** and `@convex-dev/auth` are present as hosting-platform scaffolding; the
+  analyzer does not use a database, a backend function, or authentication. See
+  [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-## Using Convex Auth on the frontend
+## Prerequisites
 
-The `/auth` page is already set up to use auth. Navigate to `/auth` for all log in / sign up sequences.
+- **Bun** 1.1 or newer (the project is developed and tested with Bun)
+- **Node.js** 20.19+ or 22.12+ if you run tooling through Node
+- A Chromium build if you want to run the browser tests (see below)
+- No API keys, accounts, or external services are required for the analyzer
 
-You MUST use this hook to get user data. Never do this yourself without the hook:
-```typescript
-import { useAuth } from "@/hooks/use-auth";
+The hosting environment supplies `VITE_CONVEX_URL`, which `src/main.tsx` uses to
+construct the platform's Convex auth client at startup. The analyzer never queries it,
+but the variable must be present for the app to boot, so a local clone needs the same
+value in its environment. No other configuration is required.
 
-const { isLoading, isAuthenticated, user, signIn, signOut } = useAuth();
+## Install and run
+
+```bash
+bun install
+bun run dev          # Vite dev server on http://localhost:5173
 ```
 
-## Protected Routes
+In the hosted SETU/Freebuff environment the dev server is already running and managed
+by the platform; do not start a second one there.
 
-The starter `/dashboard` route is protected with `RequireAuth`. Extend that page
-for the product's authenticated experience, and reuse `RequireAuth` when adding
-another protected route — do NOT hand-roll a redirect to `/auth`, since landing
-on a bare sign-in form with no explanation of what was blocked is confusing.
+Production build:
 
-`RequireAuth` states the block on the page the visitor asked for and sends them
-to `/auth?returnTo=<current route>` when they choose to sign in, so they come
-back to it. Pass `title` and `description` to say what the page is:
-
-```tsx
-<Route
-  path="/dashboard"
-  element={
-    <RequireAuth
-      title="Sign in to view your dashboard"
-      description="Your projects and settings live here."
-    >
-      <Dashboard />
-    </RequireAuth>
-  }
-/>
+```bash
+bun run build        # tsc -b && vite build
+bun run preview      # serve the built output locally
 ```
 
-Pass `redirectImmediately` for a route where bouncing straight to `/auth` really
-is better.
+## Tests
 
-## Auth Page
-
-The auth page is defined in `src/pages/Auth.tsx`. Send sign-in and sign-up actions
-to `/auth`.
-
-## Authorization
-
-You can perform authorization checks on the frontend and backend.
-
-On the frontend, you can use the `useAuth` hook to get the current user's data and authentication state.
-
-You should also be protecting queries, mutations, and actions at the base level, checking for authorization securely.
-
-## Adding a redirect after auth
-
-The `/auth` route in `src/main.tsx` redirects to `/dashboard` by default. If the
-product's main authenticated route is different, update `redirectAfterAuth` to
-that route. A validated same-origin `returnTo` query parameter takes priority so
-users can resume the protected page they originally requested. Never leave an
-authenticated product redirecting back to the public landing page.
-
-## Complete authenticated products
-
-When the requested product implies accounts, a workspace, a dashboard, or other
-signed-in functionality, the task is not complete with only a landing page and
-auth form. Build the main authenticated experience, protect its route, and verify
-that signing in reaches it.
-
-# Frontend Conventions
-
-You will be using the Vite frontend with React 19, Tailwind v4, and Shadcn UI.
-
-Generally, pages should be in the `src/pages` folder, and components should be in the `src/components` folder.
-
-Shadcn primitives are located in the `src/components/ui` folder and should be used by default.
-
-## Page routing
-
-Your page component should go under the `src/pages` folder.
-
-When adding a page, update the react router configuration in `src/main.tsx` to include the new route you just added.
-
-## Shad CN conventions
-
-Follow these conventions when using Shad CN components, which you should use by default.
-- Remember to use "cursor-pointer" to make the element clickable
-- For title text, use the "tracking-tight font-bold" class to make the text more readable
-- Always make apps MOBILE RESPONSIVE. This is important
-- AVOID NESTED CARDS. Try and not to nest cards, borders, components, etc. Nested cards add clutter and make the app look messy.
-- AVOID SHADOWS. Avoid adding any shadows to components. stick with a thin border without the shadow.
-- Avoid skeletons; instead, use the loader2 component to show a spinning loading state when loading data.
-
-
-## Landing Pages
-
-You must always create good-looking designer-level styles to your application. 
-- Make it well animated and fit a certain "theme", ie neo brutalist, retro, neumorphism, glass morphism, etc
-
-Use known images and emojis from online.
-
-If the user is logged in already, show the get started button to say "Dashboard" or "Profile" instead to take them there.
-
-## Responsiveness and formatting
-
-Make sure pages are wrapped in a container to prevent the width stretching out on wide screens. Always make sure they are centered aligned and not off-center.
-
-Always make sure that your designs are mobile responsive. Verify the formatting to ensure it has correct max and min widths as well as mobile responsiveness.
-
-- Always create sidebars for protected dashboard pages and navigate between pages
-- Always create navbars for landing pages
-- On these bars, the created logo should be clickable and redirect to the index page
-
-## Animating with Framer Motion
-
-You must add animations to components using Framer Motion. It is already installed and configured in the project.
-
-To use it, import the `motion` component from `framer-motion` and use it to wrap the component you want to animate.
-
-
-### Other Items to animate
-- Fade in and Fade Out
-- Slide in and Slide Out animations
-- Rendering animations
-- Button clicks and UI elements
-
-Animate for all components, including on landing page and app pages.
-
-## Three JS Graphics
-
-Your app comes with three js by default. You can use it to create 3D graphics for landing pages, games, etc.
-
-
-## Colors
-
-You can override colors in: `src/index.css`
-
-This uses the oklch color format for tailwind v4.
-
-Always use these color variable names.
-
-Make sure all ui components are set up to be mobile responsive and compatible with both light and dark mode.
-
-Set theme using `dark` or `light` variables at the parent className.
-
-## Styling and Theming
-
-When changing the theme, always change the underlying theme of the shad cn components app-wide under `src/components/ui` and the colors in the index.css file.
-
-Avoid hardcoding in colors unless necessary for a use case, and properly implement themes through the underlying shad cn ui components.
-
-When styling, ensure buttons and clickable items have pointer-click on them (don't by default).
-
-Always follow a set theme style and ensure it is tuned to the user's liking.
-
-## Toasts
-
-You should always use toasts to display results to the user, such as confirmations, results, errors, etc.
-
-Use the shad cn Sonner component as the toaster. For example:
-
-```
-import { toast } from "sonner"
-
-import { Button } from "@/components/ui/button"
-export function SonnerDemo() {
-  return (
-    <Button
-      variant="outline"
-      onClick={() =>
-        toast("Event has been created", {
-          description: "Sunday, December 03, 2023 at 9:00 AM",
-          action: {
-            label: "Undo",
-            onClick: () => console.log("Undo"),
-          },
-        })
-      }
-    >
-      Show Toast
-    </Button>
-  )
-}
+```bash
+bun test                                    # unit + component suite
+bun run test:e2e                            # real-browser Playwright suite
+bunx tsc -b --noEmit                        # app type-check
+bunx tsc -p tsconfig.e2e.json --noEmit      # browser-suite type-check
+bun run lint                                # ESLint
 ```
 
-Remember to import { toast } from "sonner". Usage: `toast("Event has been created.")`
+**Unit and component tests** — 226 tests in 5 files, covering the rule engine, scoring,
+link heuristics, overlap-aware highlighting, false-positive behaviour on benign
+messages, and server-rendered component output.
 
-## Dialogs
+**Browser tests** — 21 Playwright tests driving the real application in Chromium, in
+two viewport projects (1280×900 and 390×844). Each test runs only in the project it
+targets, so a full run reports **21 passed and 21 skipped** — skipped by design, not
+skipped because anything failed. They cover the analysis flow, both evidence-navigation
+paths, keyboard activation, reduced motion, the mobile layout, and a check that the
+analysed message is never transmitted.
 
-Always ensure your larger dialogs have a scroll in its content to ensure that its content fits the screen size. Make sure that the content is not cut off from the screen.
+The browser suite attaches to an **already running** server on `http://localhost:5173`;
+`playwright.config.ts` deliberately contains no `webServer` block and never starts or
+stops a server. Start the dev server yourself first.
 
-Ideally, instead of using a new page, use a Dialog instead. 
+On a fresh machine the browser needs to be downloaded and its system libraries installed:
 
-# Using the Convex backend
-
-You will be implementing the convex backend. Follow your knowledge of convex and the documentation to implement the backend.
-
-## The Convex Schema
-
-You must correctly follow the convex schema implementation.
-
-The schema is defined in `src/convex/schema.ts`.
-
-Do not include the `_id` and `_creationTime` fields in your queries (it is included by default for each table).
-Do not index `_creationTime` as it is indexed for you. Never have duplicate indexes.
-
-
-## Convex Actions: Using CRUD operations
-
-When running anything that involves external connections, you must use a convex action with "use node" at the top of the file.
-
-You cannot have queries or mutations in the same file as a "use node" action file. Thus, you must use pre-built queries and mutations in other files.
-
-You can also use the pre-installed internal crud functions for the database:
-
-```ts
-// in convex/users.ts
-import { crud } from "convex-helpers/server/crud";
-import schema from "./schema.ts";
-
-export const { create, read, update, destroy } = crud(schema, "users");
-
-// in some file, in an action:
-const user = await ctx.runQuery(internal.users.read, { id: userId });
-
-await ctx.runMutation(internal.users.update, {
-  id: userId,
-  patch: {
-    status: "inactive",
-  },
-});
+```bash
+bunx playwright install chromium-headless-shell
+bunx playwright install-deps chromium-headless-shell   # Linux, needs root
 ```
 
+The config pins the `chromium-headless-shell` channel, which is the smallest Chromium
+build that can render and drive the app. Specs are named `*.e2e.ts` on purpose: `bun
+test` collects `*.spec.ts`, so a Playwright spec with that name would be handed to the
+unit runner.
 
-## Common Convex Mistakes To Avoid
+**Passing tests do not establish detection accuracy.** They show that the engine behaves
+as specified on the fixtures in the repository. No labelled dataset has been evaluated,
+and no accuracy, precision, or recall figure is claimed anywhere in this project.
 
-When using convex, make sure:
-- Document IDs are referenced as `_id` field, not `id`.
-- Document ID types are referenced as `Id<"TableName">`, not `string`.
-- Document object types are referenced as `Doc<"TableName">`.
-- Keep schemaValidation to false in the schema file.
-- You must correctly type your code so that it passes the type checker.
-- You must handle null / undefined cases of your convex queries for both frontend and backend, or else it will throw an error that your data could be null or undefined.
-- Always use the `@/folder` path, with `@/convex/folder/file.ts` syntax for importing convex files.
-- This includes importing generated files like `@/convex/_generated/server`, `@/convex/_generated/api`
-- Remember to import functions like useQuery, useMutation, useAction, etc. from `convex/react`
-- NEVER have return type validators.
+## Project structure
+
+```
+src/
+  lib/scam-detection/   rule engine: types, rules, engine, links, highlight (presentation-free)
+  components/trust-lens/ landing sections, analyzer, results, evidence navigation
+  components/ui/        shadcn/ui primitives
+  data/trust-lens.ts    product copy, sample message, limitations, safety and reporting text
+  pages/                route components
+e2e/                    Playwright specs and generated screenshots
+docs/                   development and demo documentation
+```
+
+## Privacy and data handling
+
+Verified from the source and measured in the browser:
+
+- Analysis is a **pure function call in the page**. The message is held in React state
+  and passed to `analyzeMessage()`; there is no API client, no upload, and no storage
+  in the analysis path.
+- **No request, request body, or WebSocket frame carried the analysed text** in a
+  measured session (a unique marker typed into the message appeared in no payload).
+  This is asserted by a browser test.
+- **Nothing is persisted** by TrustLens: after a check, `localStorage`, `sessionStorage`
+  and cookies were all empty. There is no analytics or telemetry code. (The only code
+  that would write a cookie is the unused shadcn sidebar primitive.) Closing the tab
+  discards the text.
+- **Links in a message are never opened, fetched, or resolved.** The URL itself is
+  rendered as inert text, never as an anchor.
+- The page does load three things that are not part of the analyzer: the app bundle from
+  its own origin, the Convex/Auth client scaffolding, and a thumbnail helper script that
+  the hosting platform (`@vly-ai/integrations`) pulls from `cdn.jsdelivr.net`. That script
+  receives no message text in the measured session, but it is third-party code executing
+  in the page, and it should be removed before any real deployment. See
+  [Detection limitations](#detection-limitations) below.
+
+## What this prototype is not
+
+- **Not a scam determination.** A high score means the wording matches patterns that are
+  common in scams. A low score means no configured rule matched; it does **not** mean the
+  message is safe.
+- **Not a URL reputation or live-link checker.** Link checks read the address string only.
+  They do not verify ownership, registration, DNS, content, or whether a site is
+  reachable, and they cannot know where a shortened link actually points.
+- **Not sender verification.** TrustLens cannot see who really sent a message, whether a
+  number or address was spoofed, or whether the organisation named is involved.
+- **Not a machine-learning system.** There is no model and no training data.
+- **Not measured for accuracy.** The rule weights are editorial judgements, not
+  calibrated probabilities. There is no labelled test set, so no accuracy figure exists.
+- **Not production-ready.** It is an academic prototype with a single-page flow, no
+  persistence, and no back end.
+
+## Detection limitations
+
+These are real gaps in the current rules, and they are also shown in the app's detection
+breakdown:
+
+- A credential request is counted only when the message *asks* for it. A bank-style alert
+  that mentions a code while telling you never to share it is recorded as a note, not a
+  match.
+- Reward and cashback wording is counted only next to a claim, a win, or a free-gift
+  offer; an ordinary balance notification is not counted.
+- India's six-digit postal PIN code is not treated as a banking PIN, so a delivery message
+  mentioning one is not flagged — and a scam hiding behind that wording would be missed.
+- A message that names a code without asking for it or warning about it is still counted.
+  That is the cautious choice, and the rule says so.
+- Wording and link shape are all the engine can see. Paraphrased scams, image-only
+  messages, voice notes, and messages in other languages are outside its reach.
+- Unicode trickery in links (homoglyphs, mixed scripts) is only partly handled.
+
+## Reporting guidance
+
+If you think a message is a scam attempt — in India — the message itself is evidence:
+
+- Report suspected cybercrime at the **National Cyber Crime Reporting Portal**,
+  [cybercrime.gov.in](https://www.cybercrime.gov.in/).
+- For financial cyber fraud, call the **1930** helpline.
+- Report it to the organisation being imitated through its official app or the number
+  printed on your card or statement — never through a contact detail in the message.
+- If money has already left your account, report immediately; a fast report gives the
+  best chance of freezing the transfer.
+- **Never share an OTP, password, PIN or card detail with anyone**, whoever the message
+  claims to be from.
+
+These are pointers to public reporting channels, not legal advice.
+
+## Further documentation
+
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — architecture, source layout, how to add a
+  rule, testing strategy, platform notes, troubleshooting.
+- [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) — a short, repeatable demonstration with exact
+  inputs and verified expected output.
