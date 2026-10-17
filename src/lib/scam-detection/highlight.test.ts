@@ -5,6 +5,7 @@ import {
   buildHighlightSegments,
   findHighlightTarget,
   groupTargetsBySegment,
+  type HighlightSegment,
   type ScamFinding,
 } from "@/lib/scam-detection";
 import { analyzeMessage } from "@/lib/scam-detection/engine";
@@ -38,11 +39,52 @@ function finding(
   };
 }
 
+/**
+ * The message on which the partial overlap was actually reported.
+ *
+ * The engine matches `credential-request` at [84, 121) and `suspicious-link` at
+ * [55, 90), so the intersection is exactly the six characters "update".
+ */
+const OVERLAP_MESSAGE =
+  "URGENT: your account will be blocked today. Click here http://sbi-kyc-verify.online/update and share the OTP you received to claim your prize.";
+const OVERLAP_LINK_START = 55;
+const OVERLAP_LINK_END = 90;
+const OVERLAP_CREDENTIAL_START = 84;
+const OVERLAP_CREDENTIAL_END = 121;
+
 /** The text of every accepted mark, in document order. */
 function markTexts(message: string, findings: ScamFinding[]): string[] {
   return buildHighlightSegments(message, findings)
     .filter((segment) => segment.severity)
     .map((segment) => segment.text);
+}
+
+/** Every segment with the absolute offsets it covers. */
+function withOffsets(
+  message: string,
+  findings: ScamFinding[],
+): Array<{ segment: HighlightSegment; start: number; end: number }> {
+  let offset = 0;
+  return buildHighlightSegments(message, findings).map((segment) => {
+    const start = offset;
+    offset += segment.text.length;
+    return { segment, start, end: offset };
+  });
+}
+
+/** The pieces of the message that carry evidence no mark shows. */
+function unmarkedRuns(
+  message: string,
+  findings: ScamFinding[],
+): Array<{ segment: HighlightSegment; start: number; end: number }> {
+  return withOffsets(message, findings).filter(
+    ({ segment }) => (segment.unmarkedEvidence?.length ?? 0) > 0,
+  );
+}
+
+/** The rules credited with unmarked evidence in one run, in finding order. */
+function unmarkedRules(segment: HighlightSegment): string[] {
+  return (segment.unmarkedEvidence ?? []).map((entry) => entry.ruleId);
 }
 
 /** The message must always come back unchanged, marks or no marks. */
@@ -136,6 +178,238 @@ describe("highlight segments", () => {
     expect(segments.every((segment) => segment.coveredEvidence === undefined)).toBe(
       true,
     );
+  });
+});
+
+describe("unmarked evidence", () => {
+  const analysis = analyzeMessage(OVERLAP_MESSAGE);
+  const { findings } = analysis;
+
+  it("grounds the real overlap at the offsets it was reported at", () => {
+    // The ranges this whole step exists for, read off the real message rather
+    // than assumed: a six-character intersection and a 31-character remainder.
+    expect(OVERLAP_MESSAGE.slice(OVERLAP_CREDENTIAL_START, OVERLAP_CREDENTIAL_END)).toBe(
+      "update and share the OTP you received",
+    );
+    expect(OVERLAP_MESSAGE.slice(OVERLAP_LINK_START, OVERLAP_LINK_END)).toBe(
+      "http://sbi-kyc-verify.online/update",
+    );
+
+    const credential = findings.find((item) => item.ruleId === "credential-request");
+    const link = findings.find((item) => item.ruleId === "suspicious-link");
+    expect(credential?.occurrences).toEqual([
+      { start: OVERLAP_CREDENTIAL_START, end: OVERLAP_CREDENTIAL_END },
+    ]);
+    expect(link?.occurrences).toEqual([
+      { start: 44, end: 54 },
+      { start: OVERLAP_LINK_START, end: OVERLAP_LINK_END },
+    ]);
+  });
+
+  it("records the shared six characters on the mark that absorbed them", () => {
+    const segments = buildHighlightSegments(OVERLAP_MESSAGE, findings);
+    const linkMark = segments.find((segment) => (segment.ruleId === "suspicious-link" && segment.coveredEvidence));
+
+    expect(linkMark?.text).toBe(OVERLAP_MESSAGE.slice(OVERLAP_LINK_START, OVERLAP_LINK_END));
+    expect(linkMark?.coveredEvidence).toEqual([
+      {
+        ruleId: "credential-request",
+        start: OVERLAP_CREDENTIAL_START,
+        end: OVERLAP_LINK_END,
+      },
+    ]);
+    const shared = linkMark?.coveredEvidence?.[0];
+    expect((shared?.end ?? 0) - (shared?.start ?? 0)).toBe(6);
+  });
+
+  it("identifies the remaining 31 characters of the credential evidence", () => {
+    const runs = unmarkedRuns(OVERLAP_MESSAGE, findings).filter(({ segment }) =>
+      unmarkedRules(segment).includes("credential-request"),
+    );
+
+    expect(runs).toHaveLength(1);
+    expect(runs[0].start).toBe(OVERLAP_LINK_END);
+    expect(runs[0].end).toBe(OVERLAP_CREDENTIAL_END);
+    expect(runs[0].segment.text).toBe(" and share the OTP you received");
+    expect(runs[0].segment.text).toBe(
+      OVERLAP_MESSAGE.slice(OVERLAP_LINK_END, OVERLAP_CREDENTIAL_END),
+    );
+    // Six marked characters plus 31 unmarked ones is the whole 37-character
+    // credential range, so nothing is missing and nothing is counted twice.
+    expect(6 + runs[0].segment.text.length).toBe(
+      OVERLAP_CREDENTIAL_END - OVERLAP_CREDENTIAL_START,
+    );
+  });
+
+  it("never gives a character to a rule that did not match it", () => {
+    for (const { segment, start, end } of withOffsets(OVERLAP_MESSAGE, findings)) {
+      for (const entry of segment.unmarkedEvidence ?? []) {
+        const finding = findings.find((item) => item.ruleId === entry.ruleId);
+        expect(finding).toBeDefined();
+        const inside = (finding?.occurrences ?? []).some(
+          (range) => range.start <= start && range.end >= end,
+        );
+        expect(inside).toBe(true);
+      }
+    }
+  });
+
+  it("accounts for every character of every finding's evidence", () => {
+    const segments = buildHighlightSegments(OVERLAP_MESSAGE, findings);
+
+    for (const item of findings) {
+      const evidence = item.occurrences.reduce(
+        (total, range) => total + (range.end - range.start),
+        0,
+      );
+
+      let seen = 0;
+      for (const segment of segments) {
+        if (segment.ruleId === item.ruleId) seen += segment.text.length;
+        for (const entry of segment.coveredEvidence ?? []) {
+          if (entry.ruleId === item.ruleId) seen += entry.end - entry.start;
+        }
+        for (const entry of segment.unmarkedEvidence ?? []) {
+          if (entry.ruleId === item.ruleId) seen += entry.end - entry.start;
+        }
+      }
+
+      expect(seen).toBe(evidence);
+    }
+  });
+
+  it("still reconstructs the message exactly once the runs are cut out", () => {
+    const offsets = withOffsets(OVERLAP_MESSAGE, findings);
+
+    expect(offsets.map(({ segment }) => segment.text).join("")).toBe(OVERLAP_MESSAGE);
+    expect(offsets[offsets.length - 1].end).toBe(OVERLAP_MESSAGE.length);
+    for (let index = 1; index < offsets.length; index += 1) {
+      expect(offsets[index].start).toBe(offsets[index - 1].end);
+    }
+  });
+
+  it("starts a run exactly where the containing mark ends", () => {
+    const message = "abcdefghij";
+    const findings = [finding("outer", [[0, 4]]), finding("straddle", [[2, 9]])];
+    const runs = unmarkedRuns(message, findings);
+
+    expect(runs).toHaveLength(1);
+    expect([runs[0].start, runs[0].end]).toEqual([4, 9]);
+    expect(runs[0].segment.unmarkedEvidence).toEqual([
+      {
+        ruleId: "straddle",
+        ruleLabel: "straddle label",
+        start: 4,
+        end: 9,
+      },
+    ]);
+  });
+
+  it("ends a run exactly where the next mark begins", () => {
+    const message = "abcdefghij";
+    const findings = [
+      finding("outer", [[0, 4]]),
+      finding("straddle", [[2, 7]]),
+      finding("later", [[7, 10]]),
+    ];
+    const runs = unmarkedRuns(message, findings);
+
+    expect(runs).toHaveLength(1);
+    expect([runs[0].start, runs[0].end]).toEqual([4, 7]);
+    expect(runs[0].segment.text).toBe("efg");
+    // The later mark is untouched by the run that stops against it.
+    expect(runs[0].segment.unmarkedEvidence?.[0].end).toBe(7);
+  });
+
+  it("shares one region between two findings without duplicating text", () => {
+    const message = "abcdefghijklmnopqrstuvwxyz0123456789";
+    const findings = [
+      finding("outer", [[0, 20]]),
+      finding("first", [[5, 25]]),
+      finding("second", [[10, 30]]),
+    ];
+    const offsets = withOffsets(message, findings);
+
+    expect(offsets.map(({ segment }) => segment.text).join("")).toBe(message);
+    expect(offsets[offsets.length - 1].end).toBe(message.length);
+
+    const runs = unmarkedRuns(message, findings);
+    expect(runs.map(({ start, end }) => [start, end])).toEqual([
+      [20, 25],
+      [25, 30],
+    ]);
+    // The overlapping stretch is evidence for both at once…
+    expect(unmarkedRules(runs[0].segment)).toEqual(["first", "second"]);
+    expect(runs[0].segment.text).toBe(message.slice(20, 25));
+    // …and the stretch only the further-reaching one covers is its alone.
+    expect(unmarkedRules(runs[1].segment)).toEqual(["second"]);
+    expect(runs[1].segment.text).toBe(message.slice(25, 30));
+
+    // Past the end of every range, the text is ordinary again.
+    const tail = offsets.find(({ start }) => start === 30);
+    expect(tail?.segment.unmarkedEvidence).toBeUndefined();
+    expect(tail?.segment.text).toBe(message.slice(30));
+  });
+
+  it("follows the ranges, not the wording, when a phrase repeats", () => {
+    // "outer" starts first and so keeps its mark; "long" begins inside it and
+    // runs four characters past its end, which is the remainder under test.
+    const message = "pay now pay now";
+    const findings = [finding("outer", [[0, 3]]), finding("long", [[1, 7]])];
+    const runs = unmarkedRuns(message, findings);
+
+    expect(runs).toHaveLength(1);
+    expect([runs[0].start, runs[0].end]).toEqual([3, 7]);
+    expect(runs[0].segment.text).toBe(" now");
+    expect(runs[0].segment.text).toBe(message.slice(3, 7));
+
+    // " now" appears again at [11, 15) — the identical string — and is not
+    // evidence for anything, which a phrase search could not have told apart.
+    const after = withOffsets(message, findings).find(({ start }) => start === 7);
+    expect(after?.segment.unmarkedEvidence).toBeUndefined();
+    expect(after?.segment.text).toBe(" pay now");
+  });
+
+  it("leaves adjacent ranges alone", () => {
+    const message = "abcdefghij";
+    const findings = [finding("left", [[0, 5]]), finding("right", [[5, 10]])];
+
+    expect(unmarkedRuns(message, findings)).toHaveLength(0);
+    expect(markTexts(message, findings)).toEqual(["abcde", "fghij"]);
+  });
+
+  it("produces nothing from empty input", () => {
+    expect(unmarkedRuns("", [])).toHaveLength(0);
+    expect(buildHighlightSegments("", [])).toEqual([]);
+  });
+
+  it("never resolves a navigation target to a run with no mark", () => {
+    const plan = buildHighlightPlan(OVERLAP_MESSAGE, findings);
+
+    for (const target of plan.targets.values()) {
+      if (target.kind === "absent") continue;
+      const segment = plan.segments[target.segmentIndex];
+      // A target is always a mark the reader can focus and activate…
+      expect(segment.severity).toBeDefined();
+      expect(segment.ruleId).toBeDefined();
+      // …and never the non-interactive run beside it.
+      expect(segment.unmarkedEvidence).toBeUndefined();
+    }
+
+    // The step-6 resolution is unchanged by the new runs.
+    expect(plan.targets.get("credential-request")?.kind).toBe("shared");
+    expect(plan.targets.get("credential-request")?.ownerRuleId).toBe("suspicious-link");
+    expect(plan.targets.get("credential-request")?.showsOnlyPart).toBe(true);
+  });
+
+  it("reports a finding with no unmarked evidence as fully shown", () => {
+    const message = "abcdefghij";
+    const findings = [finding("outer", [[0, 10]]), finding("inner", [[3, 6]])];
+    const segments = buildHighlightSegments(message, findings);
+
+    expect(unmarkedRuns(message, findings)).toHaveLength(0);
+    // Contained, therefore wholly visible inside the other mark.
+    expect(findHighlightTarget(segments, findings, "inner").showsOnlyPart).toBe(false);
   });
 });
 

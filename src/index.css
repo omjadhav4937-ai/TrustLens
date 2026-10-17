@@ -423,6 +423,33 @@ body {
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 55%, transparent);
 }
 
+/* The part of a finding's evidence that no mark covers, because another rule's
+   earlier range absorbed the rest of it. A rule along the top distinguishes it
+   from every mark state, which all draw along the bottom or as an inset ring:
+   dotted for an ordinary mark, double for a shared one, solid for a remainder
+   belonging to the selected finding. It is not a control, so it takes no focus
+   ring and no pointer cursor. */
+.lens-evidence-remainder {
+  border-radius: 0.25rem 0.25rem 0 0;
+  padding: 0 0.15rem;
+  color: inherit;
+  background-color: color-mix(in oklab, var(--accent) 10%, transparent);
+  border-top: 1px dashed color-mix(in oklab, var(--accent) 45%, transparent);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.lens-evidence-remainder[data-evidence-emphasis="all"] {
+  background-color: color-mix(in oklab, var(--primary) 16%, transparent);
+  border-top-color: color-mix(in oklab, var(--primary) 55%, transparent);
+}
+
+.lens-evidence-remainder[data-evidence-emphasis="selected"] {
+  background-color: color-mix(in oklab, var(--accent) 26%, transparent);
+  border-top: 2px solid var(--accent);
+}
+
 /* Temporary emphasis after "Show in message". A plain outline, so it is
    identical in appearance when motion is reduced. */
 .lens-mark-pulse {
@@ -454,7 +481,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lens-mark {
+  .lens-mark,
+  .lens-evidence-remainder {
     transition: none;
   }
 }

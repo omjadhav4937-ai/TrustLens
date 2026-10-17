@@ -1,10 +1,28 @@
-import type { FindingSeverity, ScamFinding } from "./types";
+import type { FindingSeverity, ScamFinding, TextRange } from "./types";
 
 /** Evidence from another rule that a mark also shows. */
 export interface CoveredEvidence {
   /** The rule whose matched text lies inside this mark. */
   ruleId: string;
   /** The part of that rule's matched text which falls inside this mark. */
+  start: number;
+  end: number;
+}
+
+/**
+ * Evidence that no mark shows, so the reader would otherwise see it as ordinary
+ * text even though the finding it belongs to reacted to it.
+ */
+export interface UnmarkedEvidence {
+  /** The rule whose matched text this run belongs to. */
+  ruleId: string;
+  /**
+   * The rule's readable label. Carried here because, unlike a covered run, there
+   * is no owning segment to borrow the label from — and the owner's label would
+   * be the wrong one to name.
+   */
+  ruleLabel: string;
+  /** The exact unmarked part of that rule's matched text. */
   start: number;
   end: number;
 }
@@ -29,6 +47,124 @@ export interface HighlightSegment {
    * intersections — never from searching the text for a phrase.
    */
   coveredEvidence?: CoveredEvidence[];
+  /**
+   * Findings whose evidence runs through this piece of the message without a
+   * mark of its own to show it.
+   *
+   * Only present on an unmarked segment, and only on the pieces that really do
+   * fall inside a finding's matched range: plain segments are cut at every such
+   * boundary, so no character is ever given a treatment its rule did not match.
+   */
+  unmarkedEvidence?: UnmarkedEvidence[];
+}
+
+/** Removes one accepted mark from a run of evidence, returning what is left. */
+function subtractMark(run: TextRange, mark: TextRange): TextRange[] {
+  if (mark.end <= run.start || mark.start >= run.end) return [run];
+  const rest: TextRange[] = [];
+  if (mark.start > run.start) rest.push({ start: run.start, end: mark.start });
+  if (mark.end < run.end) rest.push({ start: mark.end, end: run.end });
+  return rest;
+}
+
+/**
+ * The parts of every finding's evidence that no mark shows.
+ *
+ * Each range is reduced by the accepted marks, which are disjoint by
+ * construction, so every result lands inside plain text and stops exactly at a
+ * mark boundary. The text is never searched for the phrase: a repeated phrase
+ * would answer with the wrong occurrence.
+ */
+function unmarkedEvidenceIn(
+  findings: ScamFinding[],
+  acceptedMarks: TextRange[],
+  messageLength: number,
+): UnmarkedEvidence[] {
+  const unmarked: UnmarkedEvidence[] = [];
+
+  for (const finding of findings) {
+    for (const range of finding.occurrences) {
+      const start = Math.max(0, Math.min(range.start, messageLength));
+      const end = Math.max(0, Math.min(range.end, messageLength));
+      let runs: TextRange[] = end > start ? [{ start, end }] : [];
+      for (const mark of acceptedMarks) {
+        runs = runs.flatMap((run) => subtractMark(run, mark));
+      }
+      for (const run of runs) {
+        unmarked.push({
+          ruleId: finding.ruleId,
+          ruleLabel: finding.label,
+          start: run.start,
+          end: run.end,
+        });
+      }
+    }
+  }
+
+  return unmarked;
+}
+
+/**
+ * Cuts unmarked segments at every boundary the evidence introduces, so a
+ * rendered piece never covers a character that is not evidence for anything.
+ *
+ * Marked segments are passed through untouched, which is what keeps every
+ * mark's position, index and identity stable — the marks a reader can click and
+ * the marks navigation resolves to are the same nodes before and after.
+ */
+function splitAtUnmarkedEvidence(
+  segments: HighlightSegment[],
+  unmarked: UnmarkedEvidence[],
+  message: string,
+): HighlightSegment[] {
+  const split: HighlightSegment[] = [];
+  let offset = 0;
+
+  for (const segment of segments) {
+    const start = offset;
+    const end = offset + segment.text.length;
+    offset = end;
+
+    if (segment.severity) {
+      split.push(segment);
+      continue;
+    }
+
+    const overlaps = unmarked.flatMap((entry) => {
+      const from = Math.max(start, entry.start);
+      const to = Math.min(end, entry.end);
+      return to > from ? [{ entry, from, to }] : [];
+    });
+
+    if (overlaps.length === 0) {
+      split.push(segment);
+      continue;
+    }
+
+    const boundaries = new Set<number>([start, end]);
+    for (const overlap of overlaps) {
+      boundaries.add(overlap.from);
+      boundaries.add(overlap.to);
+    }
+
+    const ordered = [...boundaries].sort((a, b) => a - b);
+    for (let index = 0; index < ordered.length - 1; index += 1) {
+      const pieceStart = ordered[index];
+      const pieceEnd = ordered[index + 1];
+      if (pieceEnd <= pieceStart) continue;
+
+      const piece: HighlightSegment = { text: message.slice(pieceStart, pieceEnd) };
+      // Every boundary is a cut, so a piece is either wholly inside a run or
+      // wholly outside it — no partial coverage can slip through.
+      const covering = overlaps
+        .filter((overlap) => overlap.from <= pieceStart && overlap.to >= pieceEnd)
+        .map((overlap) => overlap.entry);
+      if (covering.length > 0) piece.unmarkedEvidence = covering;
+      split.push(piece);
+    }
+  }
+
+  return split;
 }
 
 /**
@@ -39,9 +175,12 @@ export interface HighlightSegment {
  * at the same start, the longer one) and dropping anything that would overlap
  * it — so no phrase is ever marked twice and no character is lost.
  *
- * A dropped range is still evidence for its rule: every mark it overlaps records
- * the exact intersection in `coveredEvidence`. That is what lets the interface
- * still point a dropped finding at the text that shows it, without guessing.
+ * A dropped range is still evidence for its rule, in two distinguishable parts:
+ * every mark it overlaps records the exact intersection in `coveredEvidence`,
+ * and whatever no mark shows is recorded in `unmarkedEvidence` on the plain
+ * pieces of the message it runs through. Both come from the recorded offsets,
+ * so the interface can show a reader the whole of a finding's evidence without
+ * ever guessing at the text.
  *
  * The result is pure data, which lets the renderer place every piece into React
  * as a text child. The message is never inserted as HTML.
@@ -122,7 +261,10 @@ export function buildHighlightSegments(
     }
   }
 
-  return segments;
+  const unmarked = unmarkedEvidenceIn(findings, acceptedMarks, message.length);
+  if (unmarked.length === 0) return segments;
+
+  return splitAtUnmarkedEvidence(segments, unmarked, message);
 }
 
 /**
@@ -152,7 +294,12 @@ export interface HighlightTarget {
   evidenceLength: number;
   /** How much of it sits inside another rule's mark. */
   sharedLength: number;
-  /** True when some of the evidence is nowhere highlighted. */
+  /**
+   * True when some of this finding's evidence has no mark of its own, so it is
+   * shown as an unmarked evidence run instead. Read from those runs rather than
+   * from length arithmetic, so the flag and the outline the reader can see can
+   * never disagree.
+   */
   showsOnlyPart: boolean;
 }
 
@@ -210,9 +357,17 @@ export function findHighlightTarget(
   let sharedCovered = 0;
   let ownerRuleId: string | null = null;
   let ownerRuleLabel: string | null = null;
+  let hasUnmarkedEvidence = false;
 
   for (let index = 0; index < segments.length; index += 1) {
     const segment = segments[index];
+
+    // Checked before the mark filter: unmarked evidence by definition lives on
+    // segments that carry no severity of their own.
+    if (segment.unmarkedEvidence?.some((entry) => entry.ruleId === ruleId)) {
+      hasUnmarkedEvidence = true;
+    }
+
     if (!segment.severity) continue;
 
     if (segment.ruleId === ruleId) {
@@ -240,7 +395,7 @@ export function findHighlightTarget(
 
   target.sharedLength = sharedLength;
   target.coveredLength = ownLength + sharedLength;
-  target.showsOnlyPart = target.coveredLength < target.evidenceLength;
+  target.showsOnlyPart = hasUnmarkedEvidence;
 
   if (ownIndex !== -1) {
     target.kind = "own";

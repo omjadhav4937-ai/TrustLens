@@ -21,6 +21,13 @@ import { cn } from "@/lib/utils";
  * range was absorbed by an earlier-starting range it has no mark of its own, and
  * the mark covering its text stands in for it. That mark is then registered under
  * both rules, so navigation lands on the text that is actually on screen.
+ *
+ * A finding can also have evidence that no mark covers at all — the part of its
+ * range that runs past the mark which absorbed it. Those runs are wrapped in a
+ * `<mark>` so the reader can account for the whole of the finding: not just the
+ * overlap. It is deliberately not a control: it has no rule identity of its own,
+ * no click handler and no place in the tab order, so it can never be mistaken
+ * for a mark the reader can activate or navigate to.
  */
 
 const SEVERITY_MARK: Record<FindingSeverity, string> = {
@@ -31,6 +38,8 @@ const SEVERITY_MARK: Record<FindingSeverity, string> = {
 };
 
 type Emphasis = "selected" | "shared" | "all" | "none";
+
+type EvidenceEmphasis = "selected" | "all" | "related";
 
 export function HighlightedMessage({
   plan,
@@ -71,10 +80,59 @@ export function HighlightedMessage({
     ? targets.get(pulsingRuleId)
     : undefined;
 
+  /*
+   * Where each finding's unmarked evidence is first explained. A range cut into
+   * several pieces would otherwise repeat the same sentence once per piece, so
+   * the explanation is carried by the first piece only and the rest are read as
+   * the plain text they are.
+   */
+  const firstEvidenceIndex = new Map<string, number>();
+  segments.forEach((segment, index) => {
+    for (const entry of segment.unmarkedEvidence ?? []) {
+      if (!firstEvidenceIndex.has(entry.ruleId)) {
+        firstEvidenceIndex.set(entry.ruleId, index);
+      }
+    }
+  });
+
   return (
     <div className="whitespace-pre-wrap break-words font-mono text-[0.8125rem] leading-relaxed text-foreground/90">
       {segments.map((segment, index) => {
-        if (!segment.severity) return <span key={index}>{segment.text}</span>;
+        if (!segment.severity) {
+          const evidence = segment.unmarkedEvidence;
+          if (!evidence || evidence.length === 0) {
+            return <span key={index}>{segment.text}</span>;
+          }
+
+          const evidenceRules = evidence.map((entry) => entry.ruleId);
+          const evidenceEmphasis: EvidenceEmphasis =
+            selectedRuleId !== null && evidenceRules.includes(selectedRuleId)
+              ? "selected"
+              : selectedRuleId === null && showAll
+                ? "all"
+                : "related";
+
+          const explained = evidence
+            .filter((entry) => firstEvidenceIndex.get(entry.ruleId) === index)
+            .map((entry) => entry.ruleLabel);
+
+          return (
+            <mark
+              key={index}
+              data-evidence-for={evidenceRules.join(" ")}
+              data-evidence-emphasis={evidenceEmphasis}
+              className="lens-evidence-remainder"
+            >
+              {segment.text}
+              {explained.length > 0 && (
+                <span className="sr-only">
+                  {" — also evidence for "}
+                  {explained.join(" and ")}
+                </span>
+              )}
+            </mark>
+          );
+        }
 
         const ruleId = segment.ruleId ?? null;
         const registeredRules = rulesBySegment.get(index) ?? [];

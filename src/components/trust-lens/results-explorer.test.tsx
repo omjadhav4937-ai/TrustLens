@@ -643,6 +643,245 @@ describe("shared evidence", () => {
 });
 
 /* ------------------------------------------------------------------ */
+/* The unmarked remainder of a partially overlapping finding           */
+/* ------------------------------------------------------------------ */
+
+/** The visible text of every unmarked-evidence run, in document order. */
+function remainderTexts(html: string): string[] {
+  return [
+    ...html.matchAll(/<mark[^>]*lens-evidence-remainder[^>]*>([\s\S]*?)<\/mark>/g),
+  ].map((match) =>
+    unescapeText(match[1].replace(/<span class="sr-only">[\s\S]*?<\/span>/, "")),
+  );
+}
+
+/** The opening tags of those runs, for attribute assertions. */
+function remainderTags(html: string): string[] {
+  return [
+    ...html.matchAll(/<mark[^>]*lens-evidence-remainder[^>]*>/g),
+  ].map((match) => match[0]);
+}
+
+/**
+ * The message exactly as the panel renders it.
+ *
+ * sr-only explanations and comments are removed, then the remaining tags, so
+ * what is left is the visible text a reader would see in the same order — which
+ * is the only way to prove the split pieces neither drop nor repeat a character.
+ */
+function renderedMessageText(html: string): string {
+  return unescapeText(
+    html
+      .replace(/<span class="sr-only">[\s\S]*?<\/span>/g, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<[^>]+>/g, ""),
+  );
+}
+
+describe("unmarked evidence", () => {
+  const analysis = analyzeMessage(HIGH_RISK);
+  const selected = "credential-request";
+  const REMAINDER = " and share the OTP you received";
+
+  it("wraps exactly the evidence no mark reaches", () => {
+    const html = render(<HighlightedMessage plan={planForAnalysis(analysis)} />);
+
+    expect(remainderTexts(html)).toEqual([REMAINDER]);
+    // Read off the real message at the reported offsets, not assumed.
+    expect(HIGH_RISK.slice(90, 121)).toBe(REMAINDER);
+    expect(html).toContain('data-evidence-for="credential-request"');
+  });
+
+  it("is not a control the reader could activate or navigate to", () => {
+    const html = render(<HighlightedMessage plan={planForAnalysis(analysis)} />);
+    const tags = remainderTags(html);
+
+    expect(tags).toHaveLength(1);
+    for (const tag of tags) {
+      expect(tag).not.toContain("button");
+      expect(tag).not.toContain("tabindex");
+      expect(tag).not.toContain("data-rule-id");
+      // Not registered as a focus target for any rule, so navigation can never
+      // land on text that has no rule identity of its own.
+      expect(tag).not.toContain("data-focus-target-for");
+    }
+    // The run is a sibling of the mark, never nested inside it.
+    expect(html).not.toMatch(/<button[^>]*>[^<]*<mark[^>]*lens-evidence-remainder/);
+    expect(focusableTagNames(html)).not.toContain("mark");
+  });
+
+  it("keeps the neighbouring mark's owner and target unchanged", () => {
+    const html = render(
+      <HighlightedMessage
+        plan={planForAnalysis(analysis)}
+        selectedRuleId={selected}
+      />,
+    );
+
+    // The mark beside the run still belongs to the link, and is still the place
+    // the credential finding navigates to.
+    expect(html).toMatch(
+      /data-rule-id="suspicious-link"[^>]*data-emphasis="shared"[^>]*data-focus-target-for="credential-request"/,
+    );
+    expect(html).toContain('data-evidence-emphasis="selected"');
+  });
+
+  it("names the finding whose evidence it is, exactly once", () => {
+    const html = render(<HighlightedMessage plan={planForAnalysis(analysis)} />);
+
+    expect([...html.matchAll(/also evidence for/g)]).toHaveLength(1);
+    expect(html).toContain(
+      "also evidence for Request for an OTP, password, PIN or other credential",
+    );
+  });
+
+  it("emphasises the run when its own finding is selected", () => {
+    const html = render(
+      <HighlightedMessage
+        plan={planForAnalysis(analysis)}
+        selectedRuleId={selected}
+      />,
+    );
+    expect(html).toContain('data-evidence-emphasis="selected"');
+  });
+
+  it("stays related when a different finding is selected", () => {
+    const html = render(
+      <HighlightedMessage
+        plan={planForAnalysis(analysis)}
+        selectedRuleId="urgency-pressure"
+      />,
+    );
+    expect(html).toContain('data-evidence-emphasis="related"');
+    expect(html).not.toContain('data-evidence-emphasis="selected"');
+  });
+
+  it("joins the Show all matches view", () => {
+    const html = render(
+      <HighlightedMessage plan={planForAnalysis(analysis)} showAll />,
+    );
+    expect(html).toContain('data-evidence-emphasis="all"');
+  });
+
+  it("is absent when a finding's evidence is fully marked", () => {
+    const own = analyzeMessage(
+      "Please share the OTP you received to verify your account.",
+    );
+    const html = render(
+      <HighlightedMessage
+        plan={planForAnalysis(own)}
+        selectedRuleId={own.findings[0].ruleId}
+      />,
+    );
+
+    expect(remainderTags(html)).toHaveLength(0);
+    expect(html).not.toContain("also evidence for");
+    expect(html).toContain('data-emphasis="selected"');
+  });
+
+  it("is absent for a range that is wholly inside another mark", () => {
+    const analysis = analyzeMessage(OVERLAPPING);
+    const html = render(<HighlightedMessage plan={planForAnalysis(analysis)} />);
+
+    // An overlap with no remainder must not produce an outline or a sentence.
+    expect(remainderTags(html)).toHaveLength(0);
+  });
+
+  it("renders an empty message with no runs", () => {
+    const html = render(<HighlightedMessage plan={planForAnalysis(analyzeMessage(""))} />);
+    expect(remainderTags(html)).toHaveLength(0);
+    expect(renderedMessageText(html)).toBe("");
+  });
+
+  it("rebuilds the exact message from the rendered pieces", () => {
+    const messages = [
+      HIGH_RISK,
+      SAMPLE_MESSAGE,
+      OVERLAPPING,
+      REPEATED,
+      LINK_MESSAGE,
+      ORDINARY,
+      "",
+      // Entities, angle brackets and a link in one message, to prove the
+      // stripping helper is not hiding a difference.
+      "URGENT: click http://sbi-kyc-verify.online/update & <script>alert(1)</script> share the OTP you received",
+      "  leading and trailing  ",
+      "line one\nline two\t\tand a tab",
+    ];
+
+    let withRuns = 0;
+    for (const message of messages) {
+      const html = render(
+        <HighlightedMessage plan={planForAnalysis(analyzeMessage(message))} />,
+      );
+      const rebuilt = renderedMessageText(html);
+      expect(rebuilt).toBe(message);
+      if (remainderTags(html).length > 0) withRuns += 1;
+    }
+
+    // The set has to contain at least one message that actually exercises the
+    // split, or the reconstruction proves nothing about it.
+    expect(withRuns).toBeGreaterThan(0);
+  });
+
+  it("explains a shared region once, naming every finding in it", () => {
+    const message = "Hi Mum, I'll be home around 7.";
+    const base = analyzeMessage(message);
+    const ranges: Array<[string, string, number, number]> = [
+      ["outer", "outer rule", 0, 8],
+      ["first", "first rule", 2, 12],
+      ["second", "second rule", 4, 16],
+    ];
+    const analysis = withFindings(
+      base,
+      ranges.map(([ruleId, label, start, end]) => ({
+        ruleId,
+        label,
+        shortLabel: label,
+        severity: "high" as const,
+        weight: 20,
+        matchedText: message.slice(start, end),
+        matchedPhrases: [message.slice(start, end)],
+        occurrences: [{ start, end }],
+        explanation: "",
+        safeNextStep: "",
+      })),
+    );
+
+    const html = render(<HighlightedMessage plan={planForAnalysis(analysis)} />);
+    const tags = remainderTags(html);
+
+    // Two runs, one per distinct stretch of uncovered evidence.
+    expect(tags).toHaveLength(2);
+    expect(remainderTexts(html)).toEqual([message.slice(8, 12), message.slice(12, 16)]);
+    // The first stretch is evidence for two findings at once…
+    expect(tags[0]).toContain('data-evidence-for="first second"');
+    // …and the second only for the one that reaches further.
+    expect(tags[1]).toContain('data-evidence-for="second"');
+
+    // The sentence is read once, names both findings, and is not repeated on
+    // the run that follows.
+    expect([...html.matchAll(/also evidence for/g)]).toHaveLength(1);
+    expect(html).toContain("also evidence for first rule and second rule");
+    expect(tags[1]).not.toContain("sr-only");
+  });
+
+  it("does not carry runs from a previous message into the next analysis", () => {
+    const first = render(
+      <HighlightedMessage plan={planForAnalysis(analyzeMessage(HIGH_RISK))} />,
+    );
+    expect(remainderTags(first)).toHaveLength(1);
+
+    const second = render(
+      <HighlightedMessage plan={planForAnalysis(analyzeMessage(ORDINARY))} />,
+    );
+    expect(remainderTags(second)).toHaveLength(0);
+    expect(second).not.toContain("also evidence for");
+    expect(second).not.toContain("sbi-kyc-verify");
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /* Message inspector controls                                          */
 /* ------------------------------------------------------------------ */
 
@@ -717,8 +956,63 @@ describe("message inspector", () => {
       /data-rule-id="suspicious-link"[^>]*data-emphasis="shared"/,
     );
     expect(html).toContain("also shows the evidence of the selected finding");
-    // The status line reports an overlap instead of silently doing nothing.
-    expect(html).toContain("only the overlapping part of its text is highlighted");
+    // The status line reports the overlap instead of silently doing nothing, and
+    // no longer claims the overlap is the only part on screen.
+    expect(html).toContain("the shared text carries their mark");
+    expect(html).toContain("the rest of its evidence is outlined for this finding");
+    expect(html).not.toContain("only the overlapping part");
+  });
+
+  it("keeps the hidden remainder of evidence out of the overlap message", () => {
+    // A range that is wholly inside the other mark has no remainder, so nothing
+    // is outlined and the sentence must not promise one.
+    const base = analyzeMessage("Hi Mum, I'll be home around 7.");
+    const analysis = withFindings(base, [
+      {
+        ruleId: "outer",
+        label: "An earlier warning sign",
+        shortLabel: "an earlier warning sign",
+        severity: "high",
+        weight: 20,
+        matchedText: "Mum",
+        matchedPhrases: ["Mum"],
+        occurrences: [{ start: 3, end: 6 }],
+        explanation: "",
+        safeNextStep: "",
+      },
+      {
+        ruleId: "inner",
+        label: "A contained warning sign",
+        shortLabel: "a contained warning sign",
+        severity: "high",
+        weight: 20,
+        matchedText: "u",
+        matchedPhrases: ["u"],
+        occurrences: [{ start: 4, end: 5 }],
+        explanation: "",
+        safeNextStep: "",
+      },
+    ]);
+
+    const html = render(
+      <MessageInspector {...inspectorProps(analysis)} selectedRuleId="inner" />,
+    );
+
+    expect(html).toContain('data-emphasis="shared"');
+    expect(html).toContain("so that mark is highlighted instead of one of its own");
+    expect(html).not.toContain("lens-evidence-remainder");
+    expect(html).not.toContain("outlined for this finding");
+  });
+
+  it("accounts for unmarked evidence even when nothing is selected", () => {
+    const analysis = analyzeMessage(HIGH_RISK);
+    const html = render(<MessageInspector {...inspectorProps(analysis)} />);
+
+    // One passage of the credential evidence has no mark of its own, so the
+    // default sentence says it is outlined rather than leaving the reader to
+    // meet unexplained marks in their own message.
+    expect(html).toContain("1 passage of partly overlapping evidence is outlined");
+    expect(html).toContain('data-evidence-for="credential-request"');
   });
 
   it("reports a mark it could not reach rather than claiming success", () => {
@@ -763,6 +1057,7 @@ describe("message inspector", () => {
     expect(html).toContain("could not be located in the rendered message");
     expect(html).not.toContain("lens-mark-pulse");
     expect(html).not.toContain("No matches to mark");
+    expect(html).not.toContain("lens-evidence-remainder");
   });
 
   it("marks Show all matches as pressed when active", () => {

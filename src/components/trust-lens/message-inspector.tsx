@@ -14,8 +14,9 @@ import { useMemo } from "react";
  *
  * The status line is the panel's voice. It reports what actually happened: which
  * finding is shown, whether the mark belongs to it or merely covers its
- * evidence, and — when there is nothing to point at — that plainly, rather than
- * leaving the reader to wonder why nothing moved.
+ * evidence, how much of that evidence is outlined because no mark reaches it,
+ * and — when there is nothing to point at — that plainly, rather than leaving
+ * the reader to wonder why nothing moved.
  */
 export function MessageInspector({
   analysis,
@@ -62,6 +63,15 @@ export function MessageInspector({
     [findings, targets],
   );
 
+  // Evidence the marks do not reach. Counted from the pieces the reader can
+  // actually see outlined, so the sentence and the message agree by construction.
+  const unmarkedCount = useMemo(
+    () =>
+      segments.filter((segment) => (segment.unmarkedEvidence?.length ?? 0) > 0)
+        .length,
+    [segments],
+  );
+
   const selectedFinding = useMemo(
     () => findings.find((finding) => finding.ruleId === selectedRuleId) ?? null,
     [findings, selectedRuleId],
@@ -79,11 +89,19 @@ export function MessageInspector({
       if (markCount === 0) {
         return "No matches to mark. The message is shown exactly as it was entered.";
       }
-      return showAll
+      const counted = showAll
         ? `All ${markCount} matches are emphasised.`
         : `${markCount} matches marked across ${markedRuleCount} warning sign${
             markedRuleCount === 1 ? "" : "s"
           }.`;
+      if (unmarkedCount === 0 && markCount > 0) return counted;
+      // Evidence with no mark of its own is outlined, so it is accounted for
+      // rather than left as unexplained marks in the reader's own message.
+      return `${counted} ${unmarkedCount} passage${
+        unmarkedCount === 1 ? "" : "s"
+      } of partly overlapping evidence ${
+        unmarkedCount === 1 ? "is" : "are"
+      } outlined.`;
     }
 
     const label = selectedFinding.label;
@@ -100,15 +118,16 @@ export function MessageInspector({
 
     if (selectedTarget.kind === "own") {
       return selectedTarget.showsOnlyPart
-        ? `Showing ${label}. Its matches are emphasised; part of its evidence is shared with another warning sign's mark.`
+        ? `Showing ${label}. Its matches are emphasised, and the rest of its evidence is outlined for this finding.`
         : `Showing ${label}. Its matches are emphasised; the others remain readable.`;
     }
 
     const owner = selectedTarget.ownerRuleShortLabel ?? "another warning sign";
-    // An overlap is only ever announced when real ranges intersect, and a partial
-    // one says so rather than implying the whole finding is on screen.
+    // An overlap is only ever announced when real ranges intersect. When part of
+    // the evidence runs past the other mark, that part is outlined rather than
+    // left as ordinary text, and the sentence says both things.
     return selectedTarget.showsOnlyPart
-      ? `Showing ${label}. It overlaps evidence for ${owner}, so only the overlapping part of its text is highlighted.`
+      ? `Showing ${label}. It overlaps evidence for ${owner}: the shared text carries their mark, and the rest of its evidence is outlined for this finding.`
       : `Showing ${label}. Its evidence is shared with ${owner}, so that mark is highlighted instead of one of its own.`;
   }
 
