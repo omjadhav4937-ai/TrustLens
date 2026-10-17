@@ -340,6 +340,18 @@ Candidate A is **not** ready for a production-integration proposal as written.
 The stress test recommends refining the card-image family first and re-running
 all three datasets.
 
+## 14. A2 refinement experiment
+
+That refinement has now been run as an isolated experiment. Candidate A2 keeps
+A's card-image patterns and adds five clause-level safeguards; it removes the
+three stress false positives and the two additional Candidate B false positives
+without losing a single scam recovery or adding a false positive on any dataset.
+Candidate A and Candidate B are unchanged. See
+[CREDENTIAL-RULE-REFINEMENT.md](CREDENTIAL-RULE-REFINEMENT.md) for the design,
+the before-and-after cases, separate metrics for all three datasets, the miss
+classification and the recommendation. A2 is evaluation-only and is **not**
+integrated into production.
+
 ## 13. Production behavior at the time of this proposal
 
 - At the time of the proposal, `rules.ts`, `engine.ts`, `normalize.ts`,

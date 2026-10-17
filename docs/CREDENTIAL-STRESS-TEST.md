@@ -209,6 +209,13 @@ That refined candidate should be re-run against the original, holdout and this
 stress set before a production-integration proposal. No candidate is ready to
 ship today.
 
+**Follow-up:** that refinement has been run as Candidate A2. It removes
+`TL-C-029`, `TL-C-033` and `TL-C-034` (and cannot produce B's `TL-C-026` and
+`TL-C-030`) while keeping every scam recovery from Candidate A, for 14 TP / 4 FP
+/ 26 TN / 6 FN (P 0.778, R 0.700, F1 0.737) on this set. Candidate A/B are
+unchanged. The protective-phrase miss `TL-C-014` was reviewed but deliberately
+not fixed. See [CREDENTIAL-RULE-REFINEMENT.md](CREDENTIAL-RULE-REFINEMENT.md).
+
 ## 11. Production behavior at the time of this test
 
 At the time of this stress test, `rules.ts`, `engine.ts`, normalization, links,

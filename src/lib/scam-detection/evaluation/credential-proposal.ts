@@ -28,7 +28,26 @@ export const CREDENTIAL_RULE_ID = "credential-request";
 export const CREDENTIAL_WEIGHT = 40;
 
 export type CredentialCandidate = "A" | "B";
+/** A2 is the card-image refinement experiment and is simulated separately. */
+export type CredentialCandidateLabel = CredentialCandidate | "A2";
 export type CredentialSignalFamily = "card-image" | "recovery-code" | "app-code";
+
+/**
+ * Clause-level reasons Candidate A2 drops a card-image signal.
+ *
+ * These are diagnostic labels, never production output. A/B never emit them.
+ */
+export type CredentialSignalSuppression =
+  | "excluded-object"
+  | "not-needed"
+  | "self-directed"
+  | "conditional-official-flow"
+  | "official-portal-no-link";
+
+export interface SuppressedCredentialSignal {
+  family: CredentialSignalFamily;
+  safeguard: CredentialSignalSuppression;
+}
 
 export type CredentialSignalReason =
   | "card-image-request"
@@ -44,10 +63,12 @@ export interface CredentialEvidence {
 }
 
 export interface CredentialSignalResult {
-  candidate: CredentialCandidate;
+  candidate: CredentialCandidateLabel;
   matched: boolean;
   families: CredentialSignalFamily[];
   evidence: CredentialEvidence[];
+  /** Card-image safeguards that fired; always empty for A and B. */
+  suppressed: SuppressedCredentialSignal[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -55,7 +76,7 @@ export interface CredentialSignalResult {
 /* ------------------------------------------------------------------ */
 
 /** Sentence-ish clauses, so a request cannot match across unrelated text. */
-function clausesOf(message: string): string[] {
+export function clausesOf(message: string): string[] {
   return normalizeMessage(message)
     .split(/[.!?;]+\s+|\n+/)
     .map((clause) => clause.trim())
@@ -126,10 +147,14 @@ function cardImagePatterns(
   ];
 }
 
-const CARD_IMAGE_A = cardImagePatterns(CARD_REQUEST, IMAGE_A, PAYMENT_CARD);
+export const CARD_IMAGE_A = cardImagePatterns(
+  CARD_REQUEST,
+  IMAGE_A,
+  PAYMENT_CARD,
+);
 const CARD_IMAGE_B = cardImagePatterns(CARD_REQUEST_BROADER, IMAGE_B, CARD_OR_ID_B);
 
-function cardImageMatch(
+export function cardImageMatch(
   clause: string,
   patterns: RegExp[],
   requestPattern: RegExp,
@@ -258,7 +283,10 @@ function obfuscatedCodeMatch(message: string): CredentialEvidence | null {
 /* Public candidate matcher                                           */
 /* ------------------------------------------------------------------ */
 
-const CARD_REQUEST_PATTERN = new RegExp(`\\b(?:${CARD_REQUEST})\\b`, "i");
+export const CARD_REQUEST_PATTERN = new RegExp(
+  `\\b(?:${CARD_REQUEST})\\b`,
+  "i",
+);
 const CARD_REQUEST_BROADER_PATTERN = new RegExp(
   `\\b(?:${CARD_REQUEST_BROADER})\\b`,
   "i",
@@ -318,6 +346,7 @@ export function detectCredentialSignal(
     matched: deduped.length > 0,
     families: [...new Set(deduped.map((item) => item.family))],
     evidence: deduped,
+    suppressed: [],
   };
 }
 
@@ -347,6 +376,8 @@ export interface SimulatedCase {
   candidateMatched: boolean;
   families: CredentialSignalFamily[];
   evidenceReasons: CredentialSignalReason[];
+  /** Card-image safeguards recorded for this case (A2 only). */
+  suppressedSafeguards: CredentialSignalSuppression[];
   /** True when the shipped credential rule already produced a finding. */
   existingCredentialFinding: boolean;
   simulatedScore: number;
@@ -360,7 +391,7 @@ export interface SimulatedCase {
 
 export interface CredentialCandidateSimulation {
   dataset: string;
-  candidate: CredentialCandidate;
+  candidate: CredentialCandidateLabel;
   totalCases: number;
   binaryTotal: number;
   baseline: BinaryScore;
@@ -373,6 +404,9 @@ export interface CredentialCandidateSimulation {
   bandChangedIds: string[];
   matchCounts: Record<CredentialSignalFamily, number>;
   matchedCaseIds: string[];
+  /** Cases where a candidate safeguard dropped evidence on at least one clause. */
+  suppressedCaseIds: string[];
+  suppressionCounts: Record<CredentialSignalSuppression, number>;
   ambiguous: {
     total: number;
     baselineFlaggedIds: string[];
@@ -431,20 +465,24 @@ function sortedIds(values: readonly string[]): string[] {
 }
 
 /**
- * Runs the overlay for one dataset and one candidate.
+ * Runs the overlay for one dataset and one candidate matcher.
  *
  * The shipped engine is called exactly once per case. The candidate only adds
  * the existing credential weight when the message is matched *and* the shipped
  * rule did not already match. No other rule, field or threshold is recomputed.
+ *
+ * Exported so the A2 experiment can reuse the identical overlay arithmetic with
+ * its own matcher. A and B keep going through `simulateCandidate`.
  */
-export function simulateCandidate(
+export function simulateWithDetector(
   cases: readonly EvaluationCase[],
-  candidate: CredentialCandidate,
+  candidate: CredentialCandidateLabel,
   dataset: string,
+  detect: (message: string) => CredentialSignalResult,
 ): CredentialCandidateSimulation {
   const outcomes: SimulatedCase[] = cases.map((entry) => {
     const analysis = analyzeMessage(entry.message);
-    const signal = detectCredentialSignal(entry.message, candidate);
+    const signal = detect(entry.message);
     const existingCredentialFinding =
       analysis.matchedRuleIds.includes(CREDENTIAL_RULE_ID);
     const addsCredential = signal.matched && !existingCredentialFinding;
@@ -465,6 +503,9 @@ export function simulateCandidate(
       candidateMatched: signal.matched,
       families: signal.families,
       evidenceReasons: signal.evidence.map((item) => item.reason),
+      suppressedSafeguards: [
+        ...new Set(signal.suppressed.map((item) => item.safeguard)),
+      ],
       existingCredentialFinding,
       simulatedScore,
       simulatedRisk,
@@ -484,6 +525,19 @@ export function simulateCandidate(
   };
   for (const outcome of outcomes) {
     for (const family of outcome.families) matchCounts[family] += 1;
+  }
+
+  const suppressionCounts: Record<CredentialSignalSuppression, number> = {
+    "excluded-object": 0,
+    "not-needed": 0,
+    "self-directed": 0,
+    "conditional-official-flow": 0,
+    "official-portal-no-link": 0,
+  };
+  for (const outcome of outcomes) {
+    for (const safeguard of outcome.suppressedSafeguards) {
+      suppressionCounts[safeguard] += 1;
+    }
   }
 
   const ambiguous = outcomes.filter((outcome) => outcome.label === "ambiguous");
@@ -521,6 +575,12 @@ export function simulateCandidate(
         .filter((outcome) => outcome.candidateMatched)
         .map((outcome) => outcome.id),
     ),
+    suppressedCaseIds: sortedIds(
+      outcomes
+        .filter((outcome) => outcome.suppressedSafeguards.length > 0)
+        .map((outcome) => outcome.id),
+    ),
+    suppressionCounts,
     ambiguous: {
       total: ambiguous.length,
       baselineFlaggedIds: sortedIds(
@@ -543,6 +603,22 @@ export function simulateCandidate(
   };
 }
 
+/**
+ * Runs the A or B overlay.
+ *
+ * Kept as the only entry point for A/B so the A2 experiment cannot accidentally
+ * change their matching or their reported numbers.
+ */
+export function simulateCandidate(
+  cases: readonly EvaluationCase[],
+  candidate: CredentialCandidate,
+  dataset: string,
+): CredentialCandidateSimulation {
+  return simulateWithDetector(cases, candidate, dataset, (message) =>
+    detectCredentialSignal(message, candidate),
+  );
+}
+
 /** A metric printed as `undefined` when its denominator was zero. */
 function metric(value: number | null): string {
   return value === null ? "undefined" : value.toFixed(3);
@@ -558,11 +634,39 @@ function idList(ids: readonly string[]): string {
  * Case IDs and aggregate counts only: no message text, URLs or rationales, so
  * the dry run cannot spill dataset content into a terminal or CI log.
  */
+const CANDIDATE_LABELS: Record<CredentialCandidateLabel, string> = {
+  A: "conservative",
+  B: "broader",
+  A2: "conservative + card-image safeguards",
+};
+
+const SAFEGUARD_LABELS: Record<CredentialSignalSuppression, string> = {
+  "excluded-object": "excluded-object",
+  "not-needed": "not-needed",
+  "self-directed": "self-directed",
+  "conditional-official-flow": "conditional-official-flow",
+  "official-portal-no-link": "official-portal-no-link",
+};
+
 export function formatCandidateSimulation(
   result: CredentialCandidateSimulation,
 ): string {
-  const label = result.candidate === "A" ? "conservative" : "broader";
+  const label = CANDIDATE_LABELS[result.candidate];
   const { baseline, simulated } = result;
+  const safeguardLines = result.suppressedCaseIds.length
+    ? [
+        "",
+        `Clause-level safeguards applied to evidence: ${result.suppressedCaseIds.length} cases`,
+        `  ${(Object.keys(SAFEGUARD_LABELS) as CredentialSignalSuppression[])
+          .map(
+            (key) =>
+              `${SAFEGUARD_LABELS[key]} ${result.suppressionCounts[key]}`,
+          )
+          .join(" | ")}`,
+        "Cases with suppressed clause evidence:",
+        idList(result.suppressedCaseIds),
+      ]
+    : [];
 
   return [
     "TrustLens credential proposal — simulated overlay (NOT production output)",
@@ -589,6 +693,7 @@ export function formatCandidateSimulation(
     "Candidate matches by family (a case can match more than one)",
     `  card-image ${result.matchCounts["card-image"]} | recovery-code ${result.matchCounts["recovery-code"]} | app-code ${result.matchCounts["app-code"]}`,
     `  Cases matched: ${result.matchedCaseIds.length}`,
+    ...safeguardLines,
     "",
     `Ambiguous cases: ${result.ambiguous.total}`,
     `  flagged by baseline: ${result.ambiguous.baselineFlaggedIds.length}`,
