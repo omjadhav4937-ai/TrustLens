@@ -7,6 +7,11 @@ export interface HighlightSegment {
   severity?: FindingSeverity;
   /** The readable rule label, for the marked segments. */
   ruleLabel?: string;
+  /**
+   * The rule that produced this mark, so an interactive highlight can select
+   * its finding. Present exactly when `severity` is.
+   */
+  ruleId?: string;
 }
 
 /**
@@ -31,6 +36,7 @@ export function buildHighlightSegments(
         end: Math.max(0, Math.min(range.end, message.length)),
         severity: finding.severity,
         ruleLabel: finding.label,
+        ruleId: finding.ruleId,
       })),
     )
     .filter((mark) => mark.end > mark.start)
@@ -48,6 +54,7 @@ export function buildHighlightSegments(
       text: message.slice(mark.start, mark.end),
       severity: mark.severity,
       ruleLabel: mark.ruleLabel,
+      ruleId: mark.ruleId,
     });
     cursor = mark.end;
   }

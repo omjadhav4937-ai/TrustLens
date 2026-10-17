@@ -274,6 +274,7 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
     indicators.push({
       id: "raw-ip-address",
       strength: "strong",
+      basis: "observed",
       label: "Numeric IP address",
       explanation:
         "The link points at a bare numeric address instead of a named website. Organisations normally publish services on a domain name, so this is worth treating with suspicion.",
@@ -284,6 +285,7 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
     indicators.push({
       id: "punycode-domain",
       strength: "strong",
+      basis: "observed",
       label: "Encoded international domain",
       explanation:
         "The domain uses an encoded form that can display as ordinary letters while pointing somewhere else entirely. This technique is used to imitate real brands.",
@@ -294,7 +296,8 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
     indicators.push({
       id: "userinfo-trick",
       strength: "strong",
-      label: "Misleading address structure",
+      basis: "observed",
+      label: "“@” appears before the domain",
       explanation:
         "The address contains an “@” before the domain, which lets the visible part of a link differ from the site you would actually reach.",
     });
@@ -304,6 +307,7 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
     indicators.push({
       id: "url-shortener",
       strength: "strong",
+      basis: "observed",
       label: "Shortened link",
       explanation:
         "Link shorteners hide the real destination until the link is opened, which is why they appear so often in scam messages.",
@@ -314,6 +318,7 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
     indicators.push({
       id: "app-download-link",
       strength: "strong",
+      basis: "observed",
       label: "Application download link",
       explanation:
         "The link points at an installable application file rather than a web page. Apps installed this way bypass official stores, where they would normally be checked.",
@@ -326,7 +331,8 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
     indicators.push({
       id: "lookalike-domain",
       strength: "strong",
-      label: `Imitates “${brand.token}”`,
+      basis: "inferred",
+      label: `Uses the name “${brand.token}” with a different domain`,
       explanation: `The address uses the name “${brand.token}” but does not end in that organisation's published domain (${brand.official[0]}). It may be imitating the real site.`,
     });
     break;
@@ -341,8 +347,9 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
     if (newlyRevealed) {
       indicators.push({
         id: "character-substitution",
-      strength: "strong",
-        label: "Letters swapped for lookalikes",
+        strength: "strong",
+        basis: "inferred",
+        label: "Letters swapped for lookalike characters",
         explanation: `Replacing lookalike characters in the address reveals the name “${newlyRevealed}”. Substituting characters like 1 for “l” or 0 for “o” is a common way to fake a brand's address.`,
       });
     }
@@ -351,6 +358,7 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
   if (HIGH_RISK_TLDS.has(tld)) {
     indicators.push({
       id: "high-risk-tld",
+      basis: "observed",
       label: `Uncommon domain ending (.${tld})`,
       explanation: `The address ends in “.${tld}”, an ending that appears far more often in bulk scam campaigns than in everyday business correspondence. On its own this proves nothing.`,
       strength: "weak",
@@ -361,7 +369,8 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
   if (hyphenCount >= 2) {
     indicators.push({
       id: "hyphenated-domain",
-      label: "Heavily hyphenated domain",
+      basis: "observed",
+      label: "Multiple hyphens in the domain",
       explanation:
         "The domain string is built from several hyphenated words, a pattern typical of throwaway domains registered to imitate a service.",
       strength: "weak",
@@ -371,6 +380,7 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
   if (labels.length >= 4) {
     indicators.push({
       id: "deep-subdomain",
+      basis: "observed",
       label: "Deeply nested address",
       explanation:
         "The address stacks several subdomains before the real domain, which is often used to push a brand name into the part people read first.",
@@ -381,6 +391,7 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
   if (host.length >= 30) {
     indicators.push({
       id: "long-host",
+      basis: "observed",
       label: "Unusually long address",
       explanation:
         "The domain is longer than most published addresses, which is common in lookalike domains.",
@@ -391,6 +402,7 @@ function hostIndicators(host: string, rawUrl: string): LinkIndicator[] {
   if ((host.match(/\d/g) ?? []).length >= 4) {
     indicators.push({
       id: "digit-heavy-host",
+      basis: "observed",
       label: "Digit-heavy domain",
       explanation:
         "The domain mixes in a large number of digits, which is more typical of automatically generated addresses than of official ones.",

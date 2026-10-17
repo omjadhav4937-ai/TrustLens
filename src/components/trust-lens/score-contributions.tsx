@@ -87,8 +87,8 @@ export function ScoreContributions({ analysis }: { analysis: ScamAnalysis }) {
 
   if (findings.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/70 bg-background/40 p-5">
-        <h4 className="text-sm font-semibold tracking-tight">
+      <div className="border-b border-border/60 pb-4">
+        <h4 className="text-[0.625rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           How this score was built
         </h4>
         <p className="mt-2 text-[0.8125rem] leading-relaxed text-muted-foreground">
@@ -100,11 +100,11 @@ export function ScoreContributions({ analysis }: { analysis: ScamAnalysis }) {
   }
 
   return (
-    <div className="rounded-2xl border border-border/70 bg-background/40 p-5">
-      <h4 className="text-sm font-semibold tracking-tight">
+    <div className="border-b border-border/60 pb-4">
+      <h4 className="text-[0.625rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
         How this score was built
       </h4>
-      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
         Each matched rule is added once, whatever its points. The individual
         weights are added up and the total is then capped at {MAX_SCORE}.
       </p>

@@ -316,7 +316,11 @@ export const REPORTING = {
 
 /** Shown under every score so the limitation travels with the number. */
 export const SCORE_CAVEAT =
-  "This score reflects the heuristics above and nothing else. A high score does not prove fraud, and a low score does not prove safety.";
+  "The score reflects the rules implemented in TrustLens. A high score does not prove fraud, and a low score does not prove safety.";
+
+/** Travels with every link the engine reports, suspicious or not. */
+export const LINK_CAVEAT =
+  "These checks inspect URL structure only. They do not verify domain ownership, reputation, or live website behaviour.";
 
 /**
  * What the rule set still cannot tell apart, stated inside the detection
@@ -330,3 +334,105 @@ export const DETECTION_LIMITATIONS: string[] = [
   "The weights are editorial, not measured. No labelled dataset has been evaluated, so TrustLens publishes no accuracy percentage and claims none.",
   "These rules read wording and link shape only. They cannot see who really sent a message, what a link would do, or whether a sender is genuine.",
 ];
+
+/**
+ * What each rule-coverage status means.
+ *
+ * Three states on purpose: a rule the engine never ran has not cleared the
+ * message, and it must not be labelled as though it had.
+ */
+export interface CoverageStatusHelp {
+  status: "matched" | "not-matched" | "not-evaluated" | "error";
+  title: string;
+  meaning: string;
+}
+
+export const COVERAGE_STATUS_HELP: CoverageStatusHelp[] = [
+  {
+    status: "matched",
+    title: "Matched",
+    meaning: "The rule was evaluated and evidence for it was found in this message.",
+  },
+  {
+    status: "not-matched",
+    title: "Not matched",
+    meaning:
+      "The rule was evaluated and no matching evidence was found. This is not a statement that the message is safe.",
+  },
+  {
+    status: "not-evaluated",
+    title: "Not evaluated",
+    meaning:
+      "The rule did not run, or its status is unavailable. Nothing about the message can be concluded from this rule.",
+  },
+  {
+    status: "error",
+    title: "Could not run",
+    meaning:
+      "The rule was evaluated but failed, so it contributed nothing. Its warning signs are not covered by this result.",
+  },
+];
+
+/**
+ * The actions offered after a check.
+ *
+ * `triggeredBy` lists the rule ids whose presence makes an action especially
+ * relevant. An empty list means the action always applies, because there is no
+ * message for which "do not share an OTP" is bad advice.
+ */
+export interface SafetyAction {
+  id: string;
+  text: string;
+  triggeredBy: string[];
+}
+
+export const SAFETY_ACTIONS: SafetyAction[] = [
+  {
+    id: "never-share",
+    text: "I will not share an OTP, password, PIN or card detail with anyone, whoever the message claims to be from.",
+    triggeredBy: [],
+  },
+  {
+    id: "no-unexpected-links",
+    text: "I will not open a link I was not expecting, even when it names a service I really use.",
+    triggeredBy: ["suspicious-link"],
+  },
+  {
+    id: "end-credential-conversations",
+    text: "I will treat any request for a code, PIN or password as a scam attempt and end the conversation there.",
+    triggeredBy: ["credential-request"],
+  },
+  {
+    id: "check-account-myself",
+    text: "I will not act on a threat to block an account from inside the message. I will open the organisation's own app and check for myself.",
+    triggeredBy: ["account-threat"],
+  },
+  {
+    id: "no-prize-fee",
+    text: "I will not pay a fee or hand over details to release a prize or reward I never entered for.",
+    triggeredBy: ["prize-bait"],
+  },
+  {
+    id: "ignore-the-deadline",
+    text: "I will ignore the deadline in the message and take as long as I need to verify it.",
+    triggeredBy: ["urgency-pressure"],
+  },
+  {
+    id: "verify-officially",
+    text: "I will verify the request through the organisation's official app, or a contact I looked up myself — never through a link or number in the message.",
+    triggeredBy: [],
+  },
+  {
+    id: "report-if-money-moved",
+    text: "If money has already left my account, I will report it straight away — a fast report gives the best chance of freezing the transfer.",
+    triggeredBy: [],
+  },
+];
+
+/** Shown with the checklist so ticking boxes is never read as clearing a message. */
+export const SAFETY_CHECKLIST_NOTE =
+  "These are reminders you can work through, not a verdict. Ticking them changes nothing about the score, and a completed list does not make a message safe.";
+
+/** Shown when nothing was detected, so the panel still refuses to reassure. */
+export const SAFETY_NO_MATCH_NOTE =
+  "No configured warning sign matched this message. Keep treating unexpected messages with care, and verify before you act on anything that asks for money or details.";

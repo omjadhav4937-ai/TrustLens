@@ -51,6 +51,18 @@ export interface LinkIndicator {
    * flagged while still catching deliberately deceptive ones.
    */
   strength: "strong" | "weak";
+  /**
+   * Separates what was read off the address from what was concluded about it.
+   *
+   * - `observed` — a property of the address string, or membership of a list
+   *   this project ships. Checkable by eye, no inference involved.
+   * - `inferred` — a judgement that the address may be imitating something.
+   *   Useful, but an interpretation rather than a measurement.
+   *
+   * The interface groups indicators by this field so a reader can tell a fact
+   * about the address apart from a suspicion about its author.
+   */
+  basis: "observed" | "inferred";
 }
 
 /** A URL found in the message, with the heuristics it raised. */
