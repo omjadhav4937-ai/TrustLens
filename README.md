@@ -117,15 +117,17 @@ bun run preview      # serve the built output locally
 
 ```bash
 bun test                                    # unit + component suite
+bun run evaluate                            # labelled evaluation dataset
 bun run test:e2e                            # real-browser Playwright suite
 bunx tsc -b --noEmit                        # app type-check
 bunx tsc -p tsconfig.e2e.json --noEmit      # browser-suite type-check
 bun run lint                                # ESLint
 ```
 
-**Unit and component tests** — 226 tests in 5 files, covering the rule engine, scoring,
+**Unit and component tests** — 242 tests in 6 files, covering the rule engine, scoring,
 link heuristics, overlap-aware highlighting, false-positive behaviour on benign
-messages, and server-rendered component output.
+messages, server-rendered component output, and the labelled evaluation dataset
+(see [docs/EVALUATION.md](docs/EVALUATION.md)).
 
 **Browser tests** — 21 Playwright tests driving the real application in Chromium, in
 two viewport projects (1280×900 and 390×844). Each test runs only in the project it

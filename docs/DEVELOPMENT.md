@@ -60,6 +60,7 @@ global state, so the same input always yields the same analysis (apart from
 | `src/lib/scam-detection/engine.ts` | Orchestration, scoring, thresholds, summary and score explanation |
 | `src/lib/scam-detection/highlight.ts` | Segments, per-finding targets, navigation-failure classification |
 | `src/lib/scam-detection/index.ts` | Public surface of the engine |
+| `src/lib/scam-detection/evaluation/` | 100-case synthetic labelled dataset, deterministic runner, integrity tests (see [EVALUATION.md](EVALUATION.md)) |
 | `src/data/trust-lens.ts` | Copy, `SAMPLE_MESSAGE`, limitations, safety actions, reporting details |
 | `src/components/trust-lens/` | Landing sections, analyzer, results, evidence navigation |
 | `src/pages/` | Route components (`Landing`, `Auth`, `Dashboard`, `NotFound`) |
@@ -100,6 +101,9 @@ rule that never ran must not be displayed as if it had cleared the message.
    - `coverage.test.ts` — every rule is reachable and its copy is present
    - `false-positives.test.ts` — benign messages stay quiet
    - `highlight.test.ts` — offsets, marks, shared evidence and remainders
+   - `evaluation/evaluation.test.ts` — dataset integrity and the evaluation
+     snapshot. If a rule change alters the measured counts, update the snapshot
+     deliberately and explain the new numbers; never loosen it silently.
 4. Weights are editorial. Changing one changes the risk band of fixtures, so update the
    documented demo output in [DEMO_GUIDE.md](DEMO_GUIDE.md) at the same time.
 
@@ -109,7 +113,8 @@ wrong, fix the rule and say why in the commit.
 ## Testing
 
 ```bash
-bun test                                 # 226 tests, 5 files
+bun test                                 # 242 tests, 6 files
+bun run evaluate                         # 100-case detector evaluation (see EVALUATION.md)
 bun run test:e2e                         # 21 browser tests, 2 viewport projects
 bunx tsc -b --noEmit                     # app
 bunx tsc -p tsconfig.e2e.json --noEmit   # browser suite

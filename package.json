@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "test": "bun test",
     "test:e2e": "playwright test",
+    "evaluate": "bun scripts/evaluate-detector.ts",
     "format": "prettier --write .",
     "preview": "vite preview"
   },
