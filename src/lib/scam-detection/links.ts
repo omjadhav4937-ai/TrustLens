@@ -36,7 +36,16 @@ const SHORTENER_HOSTS = new Set([
   "1url.com",
 ]);
 
-/** TLDs with a high historical share of abuse. Treated as a weak signal only. */
+/**
+ * TLDs with a high historical share of abuse. Treated as a weak signal only: a
+ * single one of these proves nothing, and two weak signals must stack before a
+ * link is called suspicious.
+ *
+ * Mainstream endings with large legitimate populations (`.info`, `.site`,
+ * `.live`, `.work`, `.shop`, `.store`, `.club`) are deliberately *not* listed.
+ * They are common enough on ordinary sites that pairing one with a hyphenated
+ * name would flag real personal and business pages.
+ */
 const HIGH_RISK_TLDS = new Set([
   "zip",
   "mov",
@@ -59,14 +68,7 @@ const HIGH_RISK_TLDS = new Set([
   "cam",
   "lol",
   "bar",
-  "work",
   "online",
-  "site",
-  "live",
-  "shop",
-  "store",
-  "club",
-  "info",
 ]);
 
 /**

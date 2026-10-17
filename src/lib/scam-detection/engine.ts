@@ -1,7 +1,14 @@
 import { extractLinks } from "./links";
 import { normalizeMessage, sanitizeRanges } from "./normalize";
 import { RULES } from "./rules";
-import type { RiskLevel, ScamAnalysis, ScamFinding } from "./types";
+import type {
+  DetectionRule,
+  RiskLevel,
+  RuleEvaluation,
+  RuleEvaluationStatus,
+  ScamAnalysis,
+  ScamFinding,
+} from "./types";
 
 /** Score at which a message moves from low to medium risk. */
 export const RISK_THRESHOLD_MEDIUM = 30;
@@ -19,9 +26,19 @@ const NO_MATCH_SUMMARY =
 const EMPTY_SUMMARY =
   "No message was submitted, so no configured warning signs could be detected. Paste or load a message to have it checked.";
 
+const NO_MATCH_EXPLANATION =
+  "No configured warning signs matched. This does not guarantee that the message is safe.";
+
+const NOT_ANALYSED_EXPLANATION =
+  "No message has been checked, so no rule has been evaluated and there is no score to explain.";
+
+const SCREENING_CAVEAT = "This score is a screening signal, not proof of fraud.";
+
 /** Maps a 0–100 score onto the published risk bands. */
 export function riskLevelForScore(score: number): RiskLevel {
-  const safeScore = Number.isFinite(score) ? Math.max(0, Math.min(MAX_SCORE, score)) : 0;
+  const safeScore = Number.isFinite(score)
+    ? Math.max(0, Math.min(MAX_SCORE, score))
+    : 0;
   if (safeScore >= RISK_THRESHOLD_HIGH) return "high";
   if (safeScore >= RISK_THRESHOLD_MEDIUM) return "medium";
   return "low";
@@ -70,6 +87,64 @@ export function buildSummary(
 }
 
 /**
+ * Builds the one-or-two sentence reason for the score.
+ *
+ * The wording is assembled from the findings that were actually produced and the
+ * totals that were actually computed, so it can never contradict the report it
+ * sits above. When the rule weights overflow the cap, the difference between the
+ * raw sum and the final score is stated explicitly rather than hidden.
+ */
+export function buildScoreExplanation(
+  findings: ScamFinding[],
+  rawScore: number,
+  score: number,
+  wasAnalysed: boolean,
+): string {
+  if (!wasAnalysed) return NOT_ANALYSED_EXPLANATION;
+  if (findings.length === 0) return NO_MATCH_EXPLANATION;
+
+  const strongest = findings[0].shortLabel;
+
+  const lead =
+    findings.length === 1
+      ? `One configured warning sign matched — ${strongest}. ${SCREENING_CAVEAT}`
+      : findings.length <= 3
+        ? `Several warning signs matched, including ${strongest}. ${SCREENING_CAVEAT}`
+        : `${findings.length} of the ${RULES.length} configured warning signs matched, including ${strongest}. ${SCREENING_CAVEAT}`;
+
+  const cap =
+    rawScore > score
+      ? ` The matched rule weights add up to ${rawScore} points, which is capped at the maximum of ${MAX_SCORE}.`
+      : "";
+
+  return `${lead}${cap}`;
+}
+
+/** An evaluation record for a rule, with sensible defaults for the unused fields. */
+function evaluationFor(
+  rule: DetectionRule,
+  fields: Partial<RuleEvaluation> & { status: RuleEvaluationStatus },
+): RuleEvaluation {
+  return {
+    ruleId: rule.id,
+    label: rule.label,
+    shortLabel: rule.shortLabel,
+    description: rule.description,
+    weight: rule.weight,
+    severity: rule.severity,
+    contributedPoints: 0,
+    matchedText: null,
+    matchedPhrases: [],
+    occurrences: [],
+    note: null,
+    ...fields,
+  };
+}
+
+const RULE_FAILED_NOTE =
+  "This rule could not complete on this message, so it contributed nothing to the score. Its warning signs are not covered by this result.";
+
+/**
  * Runs the configured rules over one message.
  *
  * The function is pure: the same input always produces the same findings and
@@ -77,18 +152,34 @@ export function buildSummary(
  * message never leaves the browser.
  *
  * Scoring is per rule, not per match. A rule that matches five times still
- * contributes its weight once, and the total is capped at 100.
+ * contributes its weight once, and the total is capped at 100. `rawScore`
+ * records the uncapped sum so the interface can show the cap being applied
+ * instead of silently losing the overflow.
+ *
+ * Every configured rule is reported in `ruleEvaluations`, whether it matched,
+ * did not match, or never ran. A rule that never ran is reported as
+ * `not-evaluated` rather than `not-matched`, because its silence says nothing
+ * about the message.
  */
 export function analyzeMessage(rawMessage: string): ScamAnalysis {
   const message = typeof rawMessage === "string" ? rawMessage : "";
   const analyzedAt = Date.now();
 
   if (message.trim().length === 0) {
+    // No rule runs at all here, so none of them may be presented as a clean
+    // non-match. They are reported as unevaluated instead.
     return {
       riskLevel: "low",
       score: 0,
+      rawScore: 0,
+      scoreWasCapped: false,
       findings: [],
+      ruleEvaluations: RULES.map((rule) =>
+        evaluationFor(rule, { status: "not-evaluated" }),
+      ),
+      evaluatedRuleCount: 0,
       summary: EMPTY_SUMMARY,
+      scoreExplanation: buildScoreExplanation([], 0, 0, false),
       message,
       analyzedAt,
       links: [],
@@ -102,17 +193,29 @@ export function analyzeMessage(rawMessage: string): ScamAnalysis {
   const links = extractLinks(message);
   const context = { message: normalized, links };
 
+  const ruleEvaluations: RuleEvaluation[] = [];
   const findings: ScamFinding[] = [];
 
   for (const rule of RULES) {
-    let ranges;
+    let outcome;
     try {
-      ranges = sanitizeRanges(rule.detect(context), normalized.length);
+      outcome = rule.detect(context);
     } catch {
-      // A single misbehaving rule must never break the whole analysis.
+      // A single misbehaving rule must never break the whole analysis, and it
+      // must never be reported as a non-match either.
+      ruleEvaluations.push(
+        evaluationFor(rule, { status: "error", note: RULE_FAILED_NOTE }),
+      );
       continue;
     }
-    if (ranges.length === 0) continue;
+
+    const ranges = sanitizeRanges(outcome.matches, normalized.length);
+    const note = outcome.note ?? null;
+
+    if (ranges.length === 0) {
+      ruleEvaluations.push(evaluationFor(rule, { status: "not-matched", note }));
+      continue;
+    }
 
     const phrases = Array.from(
       new Set(ranges.map((range) => message.slice(range.start, range.end))),
@@ -120,34 +223,53 @@ export function analyzeMessage(rawMessage: string): ScamAnalysis {
       .filter((phrase) => phrase.trim().length > 0)
       .slice(0, MAX_ECHOED_PHRASES);
 
+    const matchedText = message.slice(ranges[0].start, ranges[0].end);
+
     findings.push({
       ruleId: rule.id,
       label: rule.label,
+      shortLabel: rule.shortLabel,
       severity: rule.severity,
       weight: rule.weight,
-      matchedText: message.slice(ranges[0].start, ranges[0].end),
+      matchedText,
       matchedPhrases: phrases,
       occurrences: ranges,
       explanation: rule.explanation,
       safeNextStep: rule.safeNextStep,
     });
+
+    ruleEvaluations.push(
+      evaluationFor(rule, {
+        status: "matched",
+        contributedPoints: rule.weight,
+        matchedText,
+        matchedPhrases: phrases,
+        occurrences: ranges,
+        note,
+      }),
+    );
   }
 
   findings.sort(
     (a, b) => b.weight - a.weight || a.occurrences[0].start - b.occurrences[0].start,
   );
 
-  const score = Math.min(
-    MAX_SCORE,
-    findings.reduce((total, finding) => total + finding.weight, 0),
-  );
-  const riskLevel = riskLevelForScore(score);
+  // The uncapped sum is kept so the report can show the cap being applied.
+  const rawScore = findings.reduce((total, finding) => total + finding.weight, 0);
+  const score = Math.min(MAX_SCORE, rawScore);
 
   return {
-    riskLevel,
+    riskLevel: riskLevelForScore(score),
     score,
+    rawScore,
+    scoreWasCapped: rawScore > MAX_SCORE,
     findings,
-    summary: buildSummary(findings, riskLevel, score),
+    ruleEvaluations,
+    evaluatedRuleCount: ruleEvaluations.filter(
+      (evaluation) => evaluation.status === "matched" || evaluation.status === "not-matched",
+    ).length,
+    summary: buildSummary(findings, riskLevelForScore(score), score),
+    scoreExplanation: buildScoreExplanation(findings, rawScore, score, true),
     message,
     analyzedAt,
     links,

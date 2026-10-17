@@ -317,3 +317,16 @@ export const REPORTING = {
 /** Shown under every score so the limitation travels with the number. */
 export const SCORE_CAVEAT =
   "This score reflects the heuristics above and nothing else. A high score does not prove fraud, and a low score does not prove safety.";
+
+/**
+ * What the rule set still cannot tell apart, stated inside the detection
+ * breakdown. Each line is a real gap in the current logic, not a disclaimer.
+ */
+export const DETECTION_LIMITATIONS: string[] = [
+  "A credential is counted only when the message asks for it. A bank-style alert that names a code and tells you never to share it is recorded as a note instead of a match.",
+  "Reward, cashback and voucher wording is counted only next to a claim, a win or a free-gift offer. An ordinary balance or cashback notification is not counted.",
+  "India's six-digit postal PIN code is not treated as a banking PIN, so a delivery message that mentions one is not flagged. A scam hiding behind that same wording would not be caught by this rule either.",
+  "A message that names a code but neither asks for it nor warns you about it is still counted. That is the cautious choice, and the note on the rule says so.",
+  "The weights are editorial, not measured. No labelled dataset has been evaluated, so TrustLens publishes no accuracy percentage and claims none.",
+  "These rules read wording and link shape only. They cannot see who really sent a message, what a link would do, or whether a sender is genuine.",
+];

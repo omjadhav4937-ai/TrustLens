@@ -1,5 +1,7 @@
 import { HighlightedMessage } from "@/components/trust-lens/highlighted-message";
 import { Reveal } from "@/components/trust-lens/reveal";
+import { RuleBreakdown } from "@/components/trust-lens/rule-breakdown";
+import { ScoreContributions } from "@/components/trust-lens/score-contributions";
 import { ScoreRing } from "@/components/trust-lens/score-ring";
 import { Section, SectionHeading } from "@/components/trust-lens/section";
 import { Badge } from "@/components/ui/badge";
@@ -230,8 +232,17 @@ function EmptyReport() {
 }
 
 function AnalysisReport({ analysis }: { analysis: ScamAnalysis }) {
-  const { riskLevel, score, findings, summary, links, matchedRuleIds, analyzedAt } =
-    analysis;
+  const {
+    riskLevel,
+    score,
+    findings,
+    summary,
+    scoreExplanation,
+    links,
+    matchedRuleIds,
+    evaluatedRuleCount,
+    analyzedAt,
+  } = analysis;
 
   const RiskIcon = RISK_ICON[riskLevel];
   const checkedAt = new Date(analyzedAt).toLocaleTimeString([], {
@@ -247,8 +258,8 @@ function AnalysisReport({ analysis }: { analysis: ScamAnalysis }) {
             Analysis results
           </h3>
           <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-            Checked at {checkedAt} · {matchedRuleIds.length} of {RULES.length}{" "}
-            rules matched
+            Checked at {checkedAt} · {evaluatedRuleCount} of {RULES.length} rules
+            evaluated · {matchedRuleIds.length} matched
           </p>
         </div>
         <Chip className={RISK_STYLE[riskLevel]}>
@@ -266,14 +277,28 @@ function AnalysisReport({ analysis }: { analysis: ScamAnalysis }) {
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold tracking-tight">What this means</h4>
+          <h4 className="text-sm font-semibold tracking-tight">
+            Why this score is {score}
+          </h4>
           <p className="mt-2 text-sm leading-relaxed text-foreground/90">
-            {summary}
+            {scoreExplanation}
           </p>
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
             {SCORE_CAVEAT}
           </p>
         </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-border/70 bg-background/40 p-5">
+        <h4 className="text-sm font-semibold tracking-tight">What this means</h4>
+        <p className="mt-2 text-sm leading-relaxed text-foreground/90">
+          {summary}
+        </p>
+      </div>
+
+      <div className="mt-4 space-y-4">
+        <ScoreContributions analysis={analysis} />
+        <RuleBreakdown analysis={analysis} />
       </div>
 
       <div className="mt-8">

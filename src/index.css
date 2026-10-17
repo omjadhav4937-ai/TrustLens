@@ -317,3 +317,66 @@ body {
   }
 }
 
+/* --- Expandable result panels ---------------------------------------------- */
+
+/* The detection breakdown mounts its content on open and unmounts it on close,
+   so the entrance is a keyframe: it plays from the very first frame without
+   needing a height measurement or a second render. */
+@keyframes lens-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lens-panel-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.lens-panel-content[data-state="open"] {
+  animation: lens-panel-in 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lens-panel-content[data-state="closed"] {
+  animation: lens-panel-out 170ms ease-in;
+}
+
+/* The chevron turns with the panel, unless motion is not wanted. */
+.lens-panel-trigger {
+  transition:
+    border-color 250ms ease,
+    background-color 250ms ease;
+}
+
+.lens-panel-trigger .lens-panel-chevron {
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lens-panel-trigger[data-state="open"] .lens-panel-chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lens-panel-content[data-state="open"],
+  .lens-panel-content[data-state="closed"],
+  .lens-panel-trigger .lens-panel-chevron {
+    animation: none;
+    transition: none;
+  }
+
+  .lens-panel-trigger[data-state="open"] .lens-panel-chevron {
+    transform: none;
+  }
+}
+

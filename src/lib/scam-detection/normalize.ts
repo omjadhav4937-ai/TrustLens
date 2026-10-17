@@ -13,6 +13,16 @@ export function normalizeMessage(message: string): string {
     .replace(/\u2013/g, "-");
 }
 
+/**
+ * True when two ranges share at least one character.
+ *
+ * Used to spot a request verb that is really part of a warning, such as the
+ * "share" inside "do not share this code".
+ */
+export function overlaps(a: TextRange, b: TextRange): boolean {
+  return a.start < b.end && a.end > b.start;
+}
+
 /** Merges overlapping or touching ranges so a phrase is never counted twice. */
 export function mergeRanges(ranges: TextRange[]): TextRange[] {
   if (ranges.length === 0) return [];

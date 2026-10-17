@@ -6,6 +6,7 @@ export {
   RISK_THRESHOLD_HIGH,
   RISK_THRESHOLD_MEDIUM,
   analyzeMessage,
+  buildScoreExplanation,
   buildSummary,
   riskLevelForScore,
 } from "./engine";
