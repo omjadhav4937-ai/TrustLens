@@ -10,6 +10,7 @@
     "test": "bun test",
     "test:e2e": "playwright test",
     "evaluate": "bun scripts/evaluate-detector.ts",
+    "evaluate:holdout": "bun scripts/evaluate-holdout.ts",
     "format": "prettier --write .",
     "preview": "vite preview"
   },

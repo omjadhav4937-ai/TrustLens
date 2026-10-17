@@ -14,6 +14,10 @@ bun test src/lib/scam-detection/evaluation    # integrity + reproducibility chec
 > and to include deliberate false-positive traps. Percentages below describe this
 > dataset only.
 
+A separate 50-case holdout is reported in
+[HOLDOUT-EVALUATION.md](HOLDOUT-EVALUATION.md). Its metrics are never merged
+with these, and `bun run evaluate` continues to report only this dataset.
+
 ## Dataset design
 
 | Bucket | Cases | Purpose |
@@ -247,7 +251,8 @@ in this step; the dataset was not used to tune the rules.
 | --- | --- |
 | `bun run evaluate` | exit 0; 100 cases, 33 predicted positive, 74 binary cases |
 | `bun test src/lib/scam-detection/evaluation` | exit 0; 16 pass, 0 fail |
-| `bun test` | exit 0; 242 pass, 0 fail (226 existing + 16 new) |
+| `bun run evaluate:holdout` | exit 0; separate 50-case report |
+| `bun test` | exit 0; 258 pass, 0 fail (226 existing + 16 evaluation + 16 holdout) |
 | `bunx tsc -b --noEmit` | exit 0 |
 | `bunx eslint src/lib/scam-detection/evaluation scripts/evaluate-detector.ts` | exit 0 |
 

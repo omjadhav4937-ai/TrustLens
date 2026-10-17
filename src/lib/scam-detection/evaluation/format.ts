@@ -14,24 +14,44 @@ function listOrNone(ids: readonly string[]): string {
   return ids.length === 0 ? "  (none)" : ids.map((id) => `  ${id}`).join("\n");
 }
 
+/** Optional heading so each report names the dataset it describes. */
+export interface ReportOptions {
+  /** Defaults to the original evaluation title. */
+  title?: string;
+  /** Optional dataset identifier printed under the heading. */
+  dataset?: string;
+}
+
 /**
  * Renders an evaluation report as plain text.
  *
  * Case IDs only: message bodies are deliberately never printed, so running the
  * evaluation cannot spill the dataset into logs or a terminal transcript.
+ * Without options the output is exactly the original 100-case report.
  */
-export function formatReport(report: EvaluationReport): string {
+export function formatReport(
+  report: EvaluationReport,
+  options: ReportOptions = {},
+): string {
   const { binary } = report;
-  const bucketLine = CASE_BUCKETS.map(
-    (bucket) => `${bucket} ${report.bucketCounts[bucket]}`,
-  ).join(" | ");
+  const title = options.title ?? "TrustLens detector evaluation";
+  // Empty buckets are omitted, so a holdout without edge cases does not show a
+  // misleading zero row. The original dataset has all four, so its output is
+  // unchanged.
+  const populatedBuckets = CASE_BUCKETS.filter(
+    (bucket) => report.bucketCounts[bucket] > 0,
+  );
+  const bucketLine = populatedBuckets
+    .map((bucket) => `${bucket} ${report.bucketCounts[bucket]}`)
+    .join(" | ");
   const labelLine = EXPECTED_LABELS.map(
     (label) => `${label} ${report.labelCounts[label]}`,
   ).join(" | ");
 
   return [
-    "TrustLens detector evaluation",
-    "=============================",
+    title,
+    "=".repeat(title.length),
+    ...(options.dataset ? [`Dataset: ${options.dataset}`] : []),
     "",
     `Cases: ${report.totalCases} synthetic evaluation examples.`,
     "These are hand-written examples, not a representative sample of real-world scams.",
@@ -66,7 +86,7 @@ export function formatReport(report: EvaluationReport): string {
     "Results by bucket",
     "-----------------",
     "bucket      cases  low  medium  high  predicted positive",
-    ...CASE_BUCKETS.map((bucket) => {
+    ...populatedBuckets.map((bucket) => {
       const summary = report.perBucket[bucket];
       return [
         bucket.padEnd(11),
