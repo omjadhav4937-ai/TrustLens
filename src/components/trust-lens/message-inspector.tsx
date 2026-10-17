@@ -1,5 +1,5 @@
 import { HighlightedMessage } from "@/components/trust-lens/highlighted-message";
-import type { ScamAnalysis } from "@/lib/scam-detection";
+import type { HighlightPlan, ScamAnalysis } from "@/lib/scam-detection";
 import { cn } from "@/lib/utils";
 import { Layers, X } from "lucide-react";
 import { useMemo } from "react";
@@ -11,51 +11,108 @@ import { useMemo } from "react";
  * and "Show in message" on a finding brings the reader back here. The message
  * text itself is never altered to make the highlighting work — the engine's
  * ranges are cut into segments that still join back into the original string.
+ *
+ * The status line is the panel's voice. It reports what actually happened: which
+ * finding is shown, whether the mark belongs to it or merely covers its
+ * evidence, and — when there is nothing to point at — that plainly, rather than
+ * leaving the reader to wonder why nothing moved.
  */
 export function MessageInspector({
   analysis,
+  plan,
   selectedRuleId,
   showAll,
   pulsingRuleId,
+  unreachableRuleId,
   onSelectRule,
   onShowAll,
   onClearSelection,
   registerMark,
 }: {
   analysis: ScamAnalysis;
+  plan: HighlightPlan;
   selectedRuleId: string | null;
   showAll: boolean;
   pulsingRuleId: string | null;
+  /** Set when a target existed but its element was not available to focus. */
+  unreachableRuleId: string | null;
   onSelectRule: (ruleId: string) => void;
   onShowAll: () => void;
   onClearSelection: () => void;
   registerMark: (ruleId: string, element: HTMLButtonElement | null) => void;
 }) {
   const { message, findings } = analysis;
+  const { segments, targets } = plan;
   const hasText = message.trim().length > 0;
 
+  // Counted from the segments, not from the engine's ranges: a range absorbed by
+  // an overlapping one is not a mark on screen, and the panel must not claim a
+  // mark the reader cannot see or select.
   const markCount = useMemo(
-    () =>
-      findings.reduce((total, finding) => total + finding.occurrences.length, 0),
-    [findings],
+    () => segments.filter((segment) => segment.severity !== undefined).length,
+    [segments],
   );
 
-  const selectedLabel = useMemo(
-    () => findings.find((finding) => finding.ruleId === selectedRuleId)?.label ?? null,
+  const markedRuleCount = useMemo(
+    () =>
+      findings.filter((finding) => {
+        const target = targets.get(finding.ruleId);
+        return target !== undefined && target.kind !== "absent";
+      }).length,
+    [findings, targets],
+  );
+
+  const selectedFinding = useMemo(
+    () => findings.find((finding) => finding.ruleId === selectedRuleId) ?? null,
     [findings, selectedRuleId],
   );
 
-  const status = !hasText
-    ? "This result has no message text to inspect."
-    : markCount === 0
-      ? "No matches to mark. The message is shown exactly as it was entered."
-      : selectedLabel
-        ? `Showing ${selectedLabel}. Its matches are emphasised; the others remain readable.`
-        : showAll
-          ? `All ${markCount} matches are emphasised.`
-          : `${markCount} matches marked across ${findings.length} warning sign${
-              findings.length === 1 ? "" : "s"
-            }.`;
+  const selectedTarget = selectedRuleId ? targets.get(selectedRuleId) : undefined;
+
+  function describeStatus(): string {
+    if (!hasText) return "This result has no message text to inspect.";
+
+    // A selection is answered before the counts: if the reader asked to be
+    // shown one finding, the panel owes them an answer about *that* finding,
+    // never a general "nothing to mark" that hides why nothing moved.
+    if (!selectedFinding) {
+      if (markCount === 0) {
+        return "No matches to mark. The message is shown exactly as it was entered.";
+      }
+      return showAll
+        ? `All ${markCount} matches are emphasised.`
+        : `${markCount} matches marked across ${markedRuleCount} warning sign${
+            markedRuleCount === 1 ? "" : "s"
+          }.`;
+    }
+
+    const label = selectedFinding.label;
+
+    // The target was resolved, so its evidence is in the message — but the
+    // element could not be reached. Saying nothing here would imply success.
+    if (unreachableRuleId === selectedFinding.ruleId) {
+      return `Showing ${label}. Its evidence could not be brought into view, so nothing was highlighted.`;
+    }
+
+    if (!selectedTarget || selectedTarget.kind === "absent") {
+      return `Showing ${label}. Its exact evidence could not be located in the rendered message, so there is no mark to highlight.`;
+    }
+
+    if (selectedTarget.kind === "own") {
+      return selectedTarget.showsOnlyPart
+        ? `Showing ${label}. Its matches are emphasised; part of its evidence is shared with another warning sign's mark.`
+        : `Showing ${label}. Its matches are emphasised; the others remain readable.`;
+    }
+
+    const owner = selectedTarget.ownerRuleShortLabel ?? "another warning sign";
+    // An overlap is only ever announced when real ranges intersect, and a partial
+    // one says so rather than implying the whole finding is on screen.
+    return selectedTarget.showsOnlyPart
+      ? `Showing ${label}. It overlaps evidence for ${owner}, so only the overlapping part of its text is highlighted.`
+      : `Showing ${label}. Its evidence is shared with ${owner}, so that mark is highlighted instead of one of its own.`;
+  }
+
+  const status = describeStatus();
 
   return (
     <div className="rounded-2xl border border-border/70 bg-background/40 p-5">
@@ -114,8 +171,7 @@ export function MessageInspector({
       <div className="mt-3 max-h-[28rem] overflow-y-auto rounded-xl border border-border/60 bg-secondary/25 p-4">
         {hasText ? (
           <HighlightedMessage
-            message={message}
-            findings={findings}
+            plan={plan}
             selectedRuleId={selectedRuleId}
             showAll={showAll}
             pulsingRuleId={pulsingRuleId}

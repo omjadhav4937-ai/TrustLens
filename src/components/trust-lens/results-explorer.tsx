@@ -4,10 +4,14 @@ import { MessageInspector } from "@/components/trust-lens/message-inspector";
 import { RiskOverview } from "@/components/trust-lens/risk-overview";
 import { RuleCoverage } from "@/components/trust-lens/rule-coverage";
 import { SafetyActions } from "@/components/trust-lens/safety-actions";
-import { RULES, type ScamAnalysis } from "@/lib/scam-detection";
+import {
+  RULES,
+  buildHighlightPlan,
+  type ScamAnalysis,
+} from "@/lib/scam-detection";
 import { useReducedMotion } from "framer-motion";
 import { Sparkles } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /** How long the "Show in message" outline stays on the focused mark. */
 const PULSE_MS = 1400;
@@ -29,6 +33,11 @@ export function ResultsExplorer({ analysis }: { analysis: ScamAnalysis }) {
   const [showAll, setShowAll] = useState(false);
   const [openRuleIds, setOpenRuleIds] = useState<string[]>([]);
   const [pulsingRuleId, setPulsingRuleId] = useState<string | null>(null);
+  //
+  // A finding can have evidence in the message and still be unreachable: the
+  // resolved mark may not be mounted yet, or its node may have gone. That is a
+  // distinct outcome from "no target exists", and the reader is told which.
+  const [unreachableRuleId, setUnreachableRuleId] = useState<string | null>(null);
 
   const cardRefs = useRef(new Map<string, HTMLLIElement>());
   const markRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -36,6 +45,15 @@ export function ResultsExplorer({ analysis }: { analysis: ScamAnalysis }) {
 
   const reduceMotion = useReducedMotion() ?? false;
   const scrollBehavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
+
+  /*
+   * Built once per analysis. The renderer and the navigation handler both read
+   * this, so neither can resolve a finding to a different mark than the other.
+   */
+  const plan = useMemo(
+    () => buildHighlightPlan(analysis.message, analysis.findings),
+    [analysis],
+  );
 
   useEffect(() => {
     return () => {
@@ -82,6 +100,7 @@ export function ResultsExplorer({ analysis }: { analysis: ScamAnalysis }) {
     (ruleId: string) => {
       setSelectedRuleId(ruleId);
       setShowAll(false);
+      setUnreachableRuleId(null);
       openCard(ruleId);
       focusCard(ruleId, "center");
     },
@@ -92,6 +111,7 @@ export function ResultsExplorer({ analysis }: { analysis: ScamAnalysis }) {
     (ruleId: string) => {
       setSelectedRuleId(ruleId);
       setShowAll(false);
+      setUnreachableRuleId(null);
       openCard(ruleId);
       // The mark sits next to its card on a wide screen, so scroll only if the
       // card is genuinely out of view.
@@ -100,16 +120,42 @@ export function ResultsExplorer({ analysis }: { analysis: ScamAnalysis }) {
     [focusCard, openCard],
   );
 
-  /** Brings the reader from a finding to the evidence, and marks it briefly. */
+  /**
+   * Brings the reader from a finding to the evidence, and marks it briefly.
+   *
+   * The target comes from the plan, not from the rule id: when another rule's
+   * earlier-starting range absorbed this finding's text, the finding has no mark
+   * of its own and the mark covering its evidence is used instead. The selection
+   * is never reassigned to that other rule — the reader chose this finding and
+   * keeps it; only the place in the message changes.
+   */
   const handleShowInMessage = useCallback(
     (ruleId: string) => {
       setSelectedRuleId(ruleId);
       setShowAll(false);
       openCard(ruleId);
 
+      const target = plan.targets.get(ruleId);
       const mark = markRefs.current.get(ruleId);
-      if (!mark) return;
 
+      /*
+       * Two ways this cannot land, both reported rather than hidden: there is no
+       * mark for the evidence at all, or the mark registered for this rule is
+       * gone — which happens when a node from a previous analysis is still
+       * referenced. A detached node must never be focused or scrolled to.
+       */
+      if (
+        !target ||
+        target.kind === "absent" ||
+        target.segmentIndex < 0 ||
+        !mark ||
+        !mark.isConnected
+      ) {
+        setUnreachableRuleId(ruleId);
+        return;
+      }
+
+      setUnreachableRuleId(null);
       mark.scrollIntoView({ block: "center", behavior: scrollBehavior });
       mark.focus({ preventScroll: true });
 
@@ -120,17 +166,19 @@ export function ResultsExplorer({ analysis }: { analysis: ScamAnalysis }) {
         pulseTimer.current = null;
       }, PULSE_MS);
     },
-    [openCard, scrollBehavior],
+    [openCard, plan, scrollBehavior],
   );
 
   const handleShowAll = useCallback(() => {
     setSelectedRuleId(null);
     setShowAll(true);
+    setUnreachableRuleId(null);
   }, []);
 
   const handleClearSelection = useCallback(() => {
     setSelectedRuleId(null);
     setShowAll(false);
+    setUnreachableRuleId(null);
   }, []);
 
   const checkedAt = new Date(analysis.analyzedAt).toLocaleTimeString([], {
@@ -202,9 +250,11 @@ export function ResultsExplorer({ analysis }: { analysis: ScamAnalysis }) {
         <div className="space-y-4">
           <MessageInspector
             analysis={analysis}
+            plan={plan}
             selectedRuleId={selectedRuleId}
             showAll={showAll}
             pulsingRuleId={pulsingRuleId}
+            unreachableRuleId={unreachableRuleId}
             onSelectRule={handleSelectFromMark}
             onShowAll={handleShowAll}
             onClearSelection={handleClearSelection}

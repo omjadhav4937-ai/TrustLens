@@ -18,9 +18,11 @@ import {
 import {
   RULES,
   analyzeMessage,
+  buildHighlightPlan,
   buildHighlightSegments,
   extractLinks,
   type ScamAnalysis,
+  type ScamFinding,
 } from "@/lib/scam-detection";
 
 /**
@@ -86,12 +88,24 @@ function focusableTagNames(html: string): string[] {
   return tags;
 }
 
+/** The segments and navigation targets the message views both read. */
+function planForAnalysis(analysis: ScamAnalysis) {
+  return buildHighlightPlan(analysis.message, analysis.findings);
+}
+
+/** Swaps in hand-built findings, for states the engine cannot produce. */
+function withFindings(analysis: ScamAnalysis, findings: ScamFinding[]): ScamAnalysis {
+  return { ...analysis, findings };
+}
+
 function inspectorProps(analysis: ScamAnalysis) {
   return {
     analysis,
+    plan: planForAnalysis(analysis),
     selectedRuleId: null,
     showAll: false,
     pulsingRuleId: null,
+    unreachableRuleId: null,
     onSelectRule: () => {},
     onShowAll: () => {},
     onClearSelection: () => {},
@@ -375,7 +389,7 @@ describe("show in message", () => {
 
   it("targets the same rule id in the message as the card", () => {
     const html = render(
-      <HighlightedMessage message={analysis.message} findings={analysis.findings} />,
+      <HighlightedMessage plan={planForAnalysis(analysis)} />,
     );
 
     const markIds = new Set(
@@ -391,7 +405,7 @@ describe("show in message", () => {
     const message = SAMPLE_MESSAGE;
     const result = analyzeMessage(message);
     const html = render(
-      <HighlightedMessage message={message} findings={result.findings} />,
+      <HighlightedMessage plan={planForAnalysis(result)} />,
     );
 
     const texts = markTexts(html);
@@ -409,10 +423,7 @@ describe("show in message", () => {
       "URGENT share the OTP <script>alert(1)</script> <img src=x onerror=alert(2)>",
     );
     const html = render(
-      <HighlightedMessage
-        message={hostile.message}
-        findings={hostile.findings}
-      />,
+      <HighlightedMessage plan={planForAnalysis(hostile)} />,
     );
 
     expect(html).not.toContain("<script>alert(1)");
@@ -449,8 +460,7 @@ describe("message highlights", () => {
     const analysis = analyzeMessage(REPEATED);
     const html = render(
       <HighlightedMessage
-        message={analysis.message}
-        findings={analysis.findings}
+        plan={planForAnalysis(analysis)}
       />,
     );
 
@@ -467,8 +477,7 @@ describe("message highlights", () => {
 
     const html = render(
       <HighlightedMessage
-        message={analysis.message}
-        findings={analysis.findings}
+        plan={planForAnalysis(analysis)}
         selectedRuleId={selected}
       />,
     );
@@ -486,8 +495,7 @@ describe("message highlights", () => {
     const analysis = analyzeMessage(HIGH_RISK);
     const html = render(
       <HighlightedMessage
-        message={analysis.message}
-        findings={analysis.findings}
+        plan={planForAnalysis(analysis)}
         showAll
       />,
     );
@@ -501,7 +509,7 @@ describe("message highlights", () => {
   it("leaves every mark unemphasised by default", () => {
     const analysis = analyzeMessage(HIGH_RISK);
     const html = render(
-      <HighlightedMessage message={analysis.message} findings={analysis.findings} />,
+      <HighlightedMessage plan={planForAnalysis(analysis)} />,
     );
     expect([...html.matchAll(/data-emphasis="none"/g)].length).toBeGreaterThan(0);
     expect(html.match(/data-emphasis="(selected|all)"/g)).toBeNull();
@@ -511,8 +519,7 @@ describe("message highlights", () => {
     const analysis = analyzeMessage(REPEATED);
     const html = render(
       <HighlightedMessage
-        message={analysis.message}
-        findings={analysis.findings}
+        plan={planForAnalysis(analysis)}
         pulsingRuleId="account-threat"
       />,
     );
@@ -523,12 +530,115 @@ describe("message highlights", () => {
   it("gives every mark an accessible name mentioning its rule", () => {
     const analysis = analyzeMessage(HIGH_RISK);
     const html = render(
-      <HighlightedMessage message={analysis.message} findings={analysis.findings} />,
+      <HighlightedMessage plan={planForAnalysis(analysis)} />,
     );
     expect(html).toContain("matched by");
     expect([...html.matchAll(/<button[^>]*class="[^"]*lens-mark/g)].length).toBe(
       markTexts(html).length,
     );
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Shared evidence: the fallback target                                */
+/* ------------------------------------------------------------------ */
+
+describe("shared evidence", () => {
+  const analysis = analyzeMessage(HIGH_RISK);
+  const selected = "credential-request";
+
+  it("registers the containing mark as the target of the covered finding", () => {
+    const html = render(<HighlightedMessage plan={planForAnalysis(analysis)} />);
+
+    // The credential range lost to the earlier-starting link range, so it has
+    // no mark of its own — the link's mark carries its name instead.
+    expect(html).toContain('data-focus-target-for="credential-request"');
+    expect(html).toMatch(
+      /data-rule-id="suspicious-link"[^>]*data-focus-target-for="credential-request"/,
+    );
+  });
+
+  it("gives every finding exactly one focus target", () => {
+    const html = render(<HighlightedMessage plan={planForAnalysis(analysis)} />);
+
+    for (const item of analysis.findings) {
+      const pattern = new RegExp(
+        `data-focus-target-for="[^"]*\\b${item.ruleId}\\b[^"]*"`,
+        "g",
+      );
+      expect([...html.matchAll(pattern)]).toHaveLength(1);
+    }
+  });
+
+  it("emphasises the shared mark without claiming the selection", () => {
+    const html = render(
+      <HighlightedMessage
+        plan={planForAnalysis(analysis)}
+        selectedRuleId={selected}
+      />,
+    );
+
+    expect([...html.matchAll(/data-emphasis="shared"/g)]).toHaveLength(1);
+    expect(html).not.toContain('data-emphasis="selected"');
+    // The other marks stay readable rather than being hidden.
+    expect(html).toContain('data-emphasis="none"');
+  });
+
+  it("draws the temporary outline on the shared mark", () => {
+    const html = render(
+      <HighlightedMessage
+        plan={planForAnalysis(analysis)}
+        selectedRuleId={selected}
+        pulsingRuleId={selected}
+      />,
+    );
+
+    expect([...html.matchAll(/lens-mark-pulse/g)]).toHaveLength(1);
+    expect(html).toMatch(/data-emphasis="shared"[^>]*lens-mark-pulse/);
+  });
+
+  it("keeps the mark's own rule clickable when it is borrowed", () => {
+    const html = render(
+      <HighlightedMessage
+        plan={planForAnalysis(analysis)}
+        selectedRuleId={selected}
+      />,
+    );
+
+    // The shared mark still belongs to the link rule in the DOM, so activating
+    // it selects the link — an explicit choice, not a silent reassignment.
+    expect(html).toMatch(/data-rule-id="suspicious-link"[^>]*data-emphasis="shared"/);
+  });
+
+  it("emphasises a finding's own mark when it has one", () => {
+    const own = analyzeMessage(
+      "Please share the OTP you received to verify your account.",
+    );
+    const ruleId = own.findings[0].ruleId;
+    expect(ruleId).toBe("credential-request");
+
+    const html = render(
+      <HighlightedMessage plan={planForAnalysis(own)} selectedRuleId={ruleId} />,
+    );
+
+    expect(html).toContain('data-emphasis="selected"');
+    expect(html).not.toContain('data-emphasis="shared"');
+  });
+
+  it("leaves the message text untouched by the fallback", () => {
+    const html = render(
+      <HighlightedMessage
+        plan={planForAnalysis(analysis)}
+        selectedRuleId={selected}
+      />,
+    );
+
+    // The mark text is still the original substring, character for character.
+    const segments = buildHighlightSegments(analysis.message, analysis.findings);
+    expect(markTexts(html)).toEqual(
+      segments.filter((segment) => segment.severity).map((segment) => segment.text),
+    );
+    expect(segments.map((segment) => segment.text).join("")).toBe(analysis.message);
   });
 });
 
@@ -582,10 +692,11 @@ describe("message inspector", () => {
     expect(html).toContain("currently selected");
   });
 
-  it("still reports the selection when another rule claimed the same text", () => {
-    // In the sample the credential phrase sits inside the suspicious URL's
-    // range, so the earlier-starting link mark wins the overlap. The selection
-    // is still real and the status line still says so.
+  it("falls back to the containing mark when another rule claimed the text", () => {
+    // The credential phrase starts inside the earlier-started suspicious-link
+    // range, so it lost the overlap contest and has no mark of its own. The
+    // link's mark covers its evidence, so that is what gets emphasised — and
+    // the selection itself stays with the credential finding.
     const analysis = analyzeMessage(HIGH_RISK);
     const html = render(
       <MessageInspector
@@ -597,7 +708,61 @@ describe("message inspector", () => {
     expect(html).toContain(
       "Showing Request for an OTP, password, PIN or other credential",
     );
+    // No mark pretends to belong to the credential rule.
+    expect(html).not.toContain('data-rule-id="credential-request"');
     expect(html).not.toContain('data-emphasis="selected"');
+    // The link's mark is emphasised as the shared target, and says whose
+    // evidence it also shows.
+    expect(html).toMatch(
+      /data-rule-id="suspicious-link"[^>]*data-emphasis="shared"/,
+    );
+    expect(html).toContain("also shows the evidence of the selected finding");
+    // The status line reports an overlap instead of silently doing nothing.
+    expect(html).toContain("only the overlapping part of its text is highlighted");
+  });
+
+  it("reports a mark it could not reach rather than claiming success", () => {
+    const analysis = analyzeMessage(HIGH_RISK);
+    const html = render(
+      <MessageInspector
+        {...inspectorProps(analysis)}
+        selectedRuleId="credential-request"
+        unreachableRuleId="credential-request"
+      />,
+    );
+
+    expect(html).toContain("could not be brought into view");
+    // Still selected: the failure does not move the reader to another finding.
+    expect(html).toContain("Showing Request for an OTP");
+  });
+
+  it("says plainly when a finding has no evidence it can point at", () => {
+    const base = analyzeMessage("Hi Mum, I'll be home around 7.");
+    // A finding the engine could not produce: a rule that matched nothing, so
+    // its evidence was never placed in the message.
+    const analysis = withFindings(base, [
+      {
+        ruleId: "phantom",
+        label: "A warning sign with no text",
+        shortLabel: "a phantom warning sign",
+        severity: "high",
+        weight: 20,
+        matchedText: "",
+        matchedPhrases: [],
+        occurrences: [],
+        explanation: "",
+        safeNextStep: "",
+      },
+    ]);
+
+    const html = render(
+      <MessageInspector {...inspectorProps(analysis)} selectedRuleId="phantom" />,
+    );
+
+    expect(html).toContain("Showing A warning sign with no text");
+    expect(html).toContain("could not be located in the rendered message");
+    expect(html).not.toContain("lens-mark-pulse");
+    expect(html).not.toContain("No matches to mark");
   });
 
   it("marks Show all matches as pressed when active", () => {
@@ -935,6 +1100,34 @@ describe("full explorer", () => {
     const html = render(<ResultsExplorer analysis={analyzeMessage(HIGH_RISK)} />);
     expect(html).toContain('aria-expanded="false"');
     expect(html.match(/aria-pressed="true"/g)).toBeNull();
+  });
+
+  it("starts a fresh analysis with no fallback state left over", () => {
+    const html = render(<ResultsExplorer analysis={analyzeMessage(HIGH_RISK)} />);
+
+    // Nothing is selected, so neither a direct nor a shared emphasis exists,
+    // and no unreachable navigation is being reported.
+    expect(html).not.toContain('data-emphasis="selected"');
+    expect(html).not.toContain('data-emphasis="shared"');
+    expect(html).not.toContain("could not be brought into view");
+    // The fallback target wiring is still present and ready.
+    expect(html).toContain('data-focus-target-for="credential-request"');
+  });
+
+  it("does not carry a previous message's marks into the next analysis", () => {
+    render(<ResultsExplorer analysis={analyzeMessage(HIGH_RISK)} />);
+    const html = render(<ResultsExplorer analysis={analyzeMessage(ORDINARY)} />);
+
+    expect(html).not.toContain("data-rule-id=");
+    expect(html).not.toContain("data-focus-target-for");
+    expect(html).not.toContain("sbi-kyc-verify");
+    expect(html).not.toContain("Showing");
+  });
+
+  it("renders an empty message without any mark or target", () => {
+    const html = render(<ResultsExplorer analysis={analyzeMessage("")} />);
+    expect(html).not.toContain("data-rule-id=");
+    expect(html).not.toContain("data-focus-target-for");
   });
 });
 

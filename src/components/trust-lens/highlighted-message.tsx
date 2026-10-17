@@ -1,7 +1,8 @@
 import {
-  buildHighlightSegments,
+  groupTargetsBySegment,
   type FindingSeverity,
-  type ScamFinding,
+  type HighlightPlan,
+  type HighlightTarget,
 } from "@/lib/scam-detection";
 import { cn } from "@/lib/utils";
 
@@ -13,8 +14,13 @@ import { cn } from "@/lib/utils";
  * returned are highlighted — nothing is guessed from a substring search.
  *
  * A marked range is a real `<button>`, never an anchor: clicking it selects the
- * finding it belongs to, it never navigates. Plain message text is never
- * linkified, so no URL found in a message can be opened from this panel.
+ * finding it owns, it never navigates. Plain message text is never linkified,
+ * so no URL found in a message can be opened from this panel.
+ *
+ * A mark can be the resolved target of more than one finding: when a rule's
+ * range was absorbed by an earlier-starting range it has no mark of its own, and
+ * the mark covering its text stands in for it. That mark is then registered under
+ * both rules, so navigation lands on the text that is actually on screen.
  */
 
 const SEVERITY_MARK: Record<FindingSeverity, string> = {
@@ -24,37 +30,46 @@ const SEVERITY_MARK: Record<FindingSeverity, string> = {
   critical: "bg-rose-400/20 text-rose-100",
 };
 
+type Emphasis = "selected" | "shared" | "all" | "none";
+
 export function HighlightedMessage({
-  message,
-  findings,
+  plan,
   selectedRuleId = null,
   showAll = false,
   pulsingRuleId = null,
   onSelectRule,
   registerMark,
 }: {
-  message: string;
-  findings: ScamFinding[];
-  /** The finding whose marks are made prominent. */
+  /** Segments plus the resolved target of every finding. */
+  plan: HighlightPlan;
+  /** The finding whose evidence is made prominent. */
   selectedRuleId?: string | null;
   /** Emphasise every mark at once, used by "Show all matches". */
   showAll?: boolean;
-  /** The single mark to draw with a temporary outline. */
+  /** The finding whose target mark should carry the temporary outline. */
   pulsingRuleId?: string | null;
   onSelectRule?: (ruleId: string) => void;
-  /** Lets the owner focus the first mark of a rule after "Show in message". */
+  /**
+   * Lets the owner focus the resolved target of a rule after "Show in message".
+   * Called with `null` on unmount, so a stale node is never retained.
+   */
   registerMark?: (ruleId: string, element: HTMLButtonElement | null) => void;
 }) {
-  const segments = buildHighlightSegments(message, findings);
+  const { segments, targets } = plan;
 
-  // The first mark of each rule is the one focus lands on, so the owner does
-  // not need to know how many times a rule matched.
-  const firstMarkIndex = new Map<string, number>();
-  segments.forEach((segment, index) => {
-    if (segment.ruleId && !firstMarkIndex.has(segment.ruleId)) {
-      firstMarkIndex.set(segment.ruleId, index);
-    }
-  });
+  /*
+   * Which rules resolve to each segment. Built from the plan rather than from
+   * the segments themselves, so a mark that stands in for another rule is
+   * reported by the same resolver the navigation handler uses.
+   */
+  const rulesBySegment = groupTargetsBySegment(targets);
+
+  const selectedTarget: HighlightTarget | undefined = selectedRuleId
+    ? targets.get(selectedRuleId)
+    : undefined;
+  const pulsingTarget: HighlightTarget | undefined = pulsingRuleId
+    ? targets.get(pulsingRuleId)
+    : undefined;
 
   return (
     <div className="whitespace-pre-wrap break-words font-mono text-[0.8125rem] leading-relaxed text-foreground/90">
@@ -62,13 +77,26 @@ export function HighlightedMessage({
         if (!segment.severity) return <span key={index}>{segment.text}</span>;
 
         const ruleId = segment.ruleId ?? null;
-        const isFirst = ruleId !== null && firstMarkIndex.get(ruleId) === index;
-        const emphasis =
-          ruleId !== null && ruleId === selectedRuleId
-            ? "selected"
-            : ruleId !== null && selectedRuleId === null && showAll
+        const registeredRules = rulesBySegment.get(index) ?? [];
+
+        const isOwnSelection = ruleId !== null && ruleId === selectedRuleId;
+        const isSelectedTarget =
+          selectedTarget !== undefined &&
+          selectedTarget.kind !== "absent" &&
+          selectedTarget.segmentIndex === index;
+
+        const emphasis: Emphasis = isOwnSelection
+          ? "selected"
+          : isSelectedTarget
+            ? "shared"
+            : selectedRuleId === null && showAll
               ? "all"
               : "none";
+
+        const pulses =
+          pulsingTarget !== undefined &&
+          pulsingTarget.kind !== "absent" &&
+          pulsingTarget.segmentIndex === index;
 
         return (
           <button
@@ -76,9 +104,14 @@ export function HighlightedMessage({
             type="button"
             data-rule-id={ruleId ?? undefined}
             data-emphasis={emphasis}
+            data-focus-target-for={
+              registeredRules.length > 0 ? registeredRules.join(" ") : undefined
+            }
             ref={
-              ruleId && isFirst
-                ? (element) => registerMark?.(ruleId, element)
+              registeredRules.length > 0
+                ? (element) => {
+                    for (const id of registeredRules) registerMark?.(id, element);
+                  }
                 : undefined
             }
             onClick={ruleId && onSelectRule ? () => onSelectRule(ruleId) : undefined}
@@ -86,7 +119,7 @@ export function HighlightedMessage({
               "lens-mark",
               "outline-none focus-visible:ring-[3px] focus-visible:ring-primary/50",
               SEVERITY_MARK[segment.severity],
-              ruleId && isFirst && pulsingRuleId === ruleId && "lens-mark-pulse",
+              pulses && "lens-mark-pulse",
             )}
           >
             {segment.text}
@@ -94,6 +127,9 @@ export function HighlightedMessage({
               {" — matched by "}
               {segment.ruleLabel}
               {emphasis === "selected" ? ", currently selected" : ""}
+              {emphasis === "shared"
+                ? ", also shows the evidence of the selected finding"
+                : ""}
             </span>
           </button>
         );

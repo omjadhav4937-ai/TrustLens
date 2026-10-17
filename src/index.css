@@ -409,6 +409,16 @@ body {
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 70%, transparent);
 }
 
+/* The selected finding has no mark of its own because another rule's range
+   absorbed its text; this mark covers that evidence. A double underline is a
+   different shape from both the dotted default and the selected mark's solid
+   outline, so the two states stay distinct without relying on colour. */
+.lens-mark[data-emphasis="shared"] {
+  border-bottom-style: double;
+  border-bottom-width: 3px;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
 .lens-mark[data-emphasis="all"] {
   box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 55%, transparent);
 }
