@@ -183,12 +183,16 @@ Verified from the source and measured in the browser:
   discards the text.
 - **Links in a message are never opened, fetched, or resolved.** The URL itself is
   rendered as inert text, never as an anchor.
-- The page does load three things that are not part of the analyzer: the app bundle from
-  its own origin, the Convex/Auth client scaffolding, and a thumbnail helper script that
-  the hosting platform (`@vly-ai/integrations`) pulls from `cdn.jsdelivr.net`. That script
-  receives no message text in the measured session, but it is third-party code executing
-  in the page, and it should be removed before any real deployment. See
-  [Detection limitations](#detection-limitations) below.
+- **Platform screenshot code does run in the page, and that is a real caveat.** The
+  hosting platform's `@vly-ai/integrations` module is imported in `src/main.tsx` and also
+  injected by `vlyPlugin()`. At load it registers a `vly-screenshot-request` listener and
+  immediately **preloads** `html2canvas-pro` from `cdn.jsdelivr.net` (no SRI), so remote
+  third-party code executes on every page load. If a parent frame asks for a screenshot,
+  it captures `document.body` — the region containing the message box — and posts the
+  image back with target origin `"*"` and no origin check. This is platform scaffolding,
+  not analyzer code, and it never transmits the message text on its own (measured). For a
+  real deployment it should be removed at the platform level; see
+  [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#platform-notes).
 
 ## What this prototype is not
 

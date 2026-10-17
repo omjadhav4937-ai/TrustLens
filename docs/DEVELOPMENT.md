@@ -144,10 +144,7 @@ Constraints worth knowing:
 TrustLens is hosted on the Freebuff/Vly platform, which supplies some scaffolding:
 
 - `src/main.tsx` imports `@vly-ai/integrations`, mounts `VlyToolbar` from the read-only
-  file `vly-toolbar-readonly.tsx`, and wraps the app in `ConvexAuthProvider`. The platform
-  bundle loads a thumbnail helper (`html2canvas-pro`) from `cdn.jsdelivr.net`; the analyzer
-  never uses it and it receives no message text, but it is third-party code and should be
-  removed for a real deployment.
+  file `vly-toolbar-readonly.tsx`, and wraps the app in `ConvexAuthProvider`.
 - A `ConvexReactClient` is constructed from `VITE_CONVEX_URL`. The product makes no
   queries, mutations, or actions, so nothing is stored server-side.
 - `/auth` and `/dashboard` are starter scaffolding. They are reachable by URL but are not
@@ -155,6 +152,34 @@ TrustLens is hosted on the Freebuff/Vly platform, which supplies some scaffoldin
   so the routes keep working.
 - Platform-owned files (`vly-toolbar-readonly.tsx`, `src/convex/auth.ts`,
   `src/convex/auth.config.ts`, `src/convex/auth/emailOtp.ts`) are marked *do not modify*.
+
+### What `@vly-ai/integrations` actually does
+
+Verified by reading the package and exercising it in the browser:
+
+1. **Screenshot listener.** Importing the module runs a side effect that registers a
+   `message` listener for `vly-screenshot-request`, then *preloads*
+   `https://cdn.jsdelivr.net/npm/html2canvas-pro@2.0.4/dist/html2canvas-pro.min.js`
+   (no `integrity` attribute) so it is ready before the first request. On a request it
+   captures `document.body` and posts the data URL to `window.parent` with target origin
+   `"*"`. Its handler does not check `event.origin`.
+2. **`vlyPlugin()`** injects `import '@vly-ai/integrations'` plus a small HMR/runtime
+   error forwarder into `index.html`. Vite bundles both, which is why the integration is
+   present in **production** output as well as in the dev preview.
+3. **`VlyToolbar`** is separate from the package: it listens for
+   `vly-toolbar-enable-select`, inspects components, and rasterises the selected element
+   with `@zumer/snapdom`. It is the editor's element picker.
+
+None of this is used by the analyzer. `src/lib/vly-integrations.ts` (an unused wrapper
+for AI/email/payment calls) has been removed; if a Convex action needs those clients,
+call `createVlyIntegrations` from the package directly, as `integrations.md` now shows.
+
+**If you remove it for a deployment**, drop `vlyPlugin()` from the `plugins` array and
+the import in `src/main.tsx`. Measured effect in this repository: the entry chunk goes
+from 474,274 to 471,107 bytes (gzip 147.41 → 146.15 kB), and `html2canvas-pro` and
+`vly-screenshot-request` disappear from `dist`. You also lose the editor's dev-time
+error forwarding and its screenshot/thumbnail capture, so this is a hosting decision
+rather than a product one.
 
 ## Troubleshooting
 

@@ -18,13 +18,17 @@ The `@vly-ai/integrations` package is already included in package.json.
 ```typescript
 "use node";
 
-import { vly } from '../lib/vly-integrations';
+import { createVlyIntegrations } from '@vly-ai/integrations';
 import { action } from "./_generated/server";
+
+const vly = createVlyIntegrations({
+  deploymentToken: process.env.VLY_INTEGRATION_KEY!,
+});
 
 export const generateAIResponse = action({
   handler: async (ctx, args) => {
     // AI Completions
-    const completion = await freebuff.com.completion({
+    const completion = await vly.ai.completion({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: 'You are a helpful assistant.' },
