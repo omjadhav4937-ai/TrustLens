@@ -6,11 +6,6 @@ import { CAPABILITIES, SECTION_IDS, type Capability } from "@/data/trust-lens";
 import { cn } from "@/lib/utils";
 import { Check, CircleCheck, CircleDashed, RotateCw } from "lucide-react";
 
-const AVAILABLE_COUNT = CAPABILITIES.filter(
-  (capability) => capability.status === "available",
-).length;
-const PLANNED_COUNT = CAPABILITIES.length - AVAILABLE_COUNT;
-
 function StatusBadge({ status }: { status: Capability["status"] }) {
   const isAvailable = status === "available";
   return (
@@ -119,8 +114,8 @@ export function Capabilities() {
       <Reveal>
         <SectionHeading
           eyebrow="What you can do"
-          title="Everything TrustLens is being built to handle"
-          description={`${AVAILABLE_COUNT} capabilities work today and ${PLANNED_COUNT} are on the way. Turn any card over for the detail behind it, and check the badge to see where it stands.`}
+          title="Everything TrustLens checks for you"
+          description="Every capability below is working today. Turn any card over for the detail behind it."
         />
       </Reveal>
 
@@ -138,12 +133,10 @@ export function Capabilities() {
 
       <Reveal>
         <p className="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-muted-foreground">
-          <span className="font-semibold text-foreground">Available today:</span>{" "}
-          the analyzer itself, the sample message, clearing the input, and
-          browser-only processing.{" "}
-          <span className="font-semibold text-foreground">Coming next:</span> the
-          detection engine that produces the risk level, the highlighted warning
-          signs, the link and lookalike-domain checks, and the safe next steps.
+          The engine behind these cards is entirely rule-based and runs in your
+          browser: a fixed set of written warning-sign rules plus offline link
+          heuristics. Nothing is uploaded, and no third-party service is
+          involved, so the message you check stays on your device.
         </p>
       </Reveal>
     </Section>

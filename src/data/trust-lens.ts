@@ -40,6 +40,7 @@ export const SECTION_IDS = {
   capabilities: "capabilities",
   analyzer: "analyzer",
   results: "results",
+  safety: "safety",
   about: "about",
 } as const;
 
@@ -205,7 +206,7 @@ export const CAPABILITIES: Capability[] = [
     title: "A clear risk level",
     description:
       "Every check ends in Low, Medium, or High, with the reasons behind it shown alongside.",
-    status: "planned",
+    status: "available",
     detail:
       "One word is easier to act on than a wall of detail. Each finding contributes to a single overall level, and the findings that produced it sit right beside it, so the level is never a mystery you have to take on faith.",
     points: [
@@ -219,7 +220,7 @@ export const CAPABILITIES: Capability[] = [
     title: "Highlighted warning signs",
     description:
       "Suspicious phrases are marked inside your own message and explained one at a time.",
-    status: "planned",
+    status: "available",
     detail:
       "Seeing the suspicious phrase inside your own message is what makes a warning stick. TrustLens marks the exact text it reacted to, then explains in one sentence why that phrase is worth a second look.",
     points: [
@@ -233,9 +234,9 @@ export const CAPABILITIES: Capability[] = [
     title: "Link and lookalike-domain checks",
     description:
       "Shortened, misspelled, and imitation domains are called out before you tap them.",
-    status: "planned",
+    status: "available",
     detail:
-      "Most scams end with a single tap. TrustLens is being built to look at the destination first: shortened links, brand names with a letter swapped, and domains that imitate a bank or a courier closely enough to pass a glance.",
+      "Most scams end with a single tap. TrustLens looks at the destination before you do: shortened links, brand names with a letter swapped, and domains that imitate a bank or a courier closely enough to pass a glance.",
     points: [
       "Shortened and mismatched links flagged",
       "Lookalike domains compared with the genuine name",
@@ -247,7 +248,7 @@ export const CAPABILITIES: Capability[] = [
     title: "Safe next steps",
     description:
       "Findings turn into specific actions: verify through official channels, never share an OTP, and report the message.",
-    status: "planned",
+    status: "available",
     detail:
       "Knowing a message is risky is only half of the job. Every finding ends with the specific action to take, so you finish a check knowing exactly what to do next rather than simply feeling uneasy.",
     points: [
@@ -286,3 +287,33 @@ export const DEMO_WARNING_LABELS: DemoWarningLabel[] = [
     description: "asks you to share a one-time password",
   },
 ];
+
+/**
+ * Safety copy. Kept here so the limitations the engine actually has can be
+ * reviewed in one place instead of being scattered across components.
+ */
+export const SCORE_LIMITATIONS: string[] = [
+  "The score is built only from the written heuristics listed on this page. It is not a scan by a security vendor, and it does not check reputation, ownership, registration or whether a website is reachable.",
+  "A high score is a warning, not a verdict. It means the wording matches patterns commonly used in scams — not that the sender intended fraud.",
+  "A low score does not guarantee that a message is safe. TrustLens cannot tell who really sent a message, and it cannot see what a link would do.",
+  "TrustLens never opens, visits or requests any link found in your message, and never sends your message anywhere.",
+  "Never send an OTP, password, PIN or bank detail to anyone, whatever a message claims about why it is needed.",
+];
+
+export const SAFE_BEHAVIOUR: string[] = [
+  "Do not tap a link you were not expecting, even when the message names a service you really use.",
+  "Do not share an OTP, password, PIN or card detail with anyone, including someone claiming to be from your bank.",
+  "Verify by opening the organisation's official app, or by typing its address yourself instead of following a link in the message.",
+  "If money has already left your account, report it straight away — a fast report gives the best chance of freezing the transfer.",
+];
+
+export const REPORTING = {
+  body: "In India, suspected cybercrime can be reported through the National Cyber Crime Reporting Portal, and financial cyber fraud can also be reported on the 1930 helpline run by the Ministry of Home Affairs.",
+  portalLabel: "cybercrime.gov.in",
+  portalUrl: "https://www.cybercrime.gov.in/",
+  helpline: "1930",
+};
+
+/** Shown under every score so the limitation travels with the number. */
+export const SCORE_CAVEAT =
+  "This score reflects the heuristics above and nothing else. A high score does not prove fraud, and a low score does not prove safety.";

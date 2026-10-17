@@ -61,9 +61,9 @@ export function About() {
           </dl>
 
           <p className="mt-8 border-t border-border/60 pt-6 text-sm leading-relaxed text-muted-foreground">
-            Scope note: this build covers the interface only. Warning-sign
-            detection, risk scoring, link checks, and explanations are planned
-            for the next step of the project. TrustLens will always present its
+            Scope note: the engine is deliberately narrow and entirely
+            rule-based. It checks a fixed set of warning-sign rules plus offline
+            link heuristics, all inside your browser. It will always present its
             findings as possible warning signs rather than a guarantee about any
             message.
           </p>

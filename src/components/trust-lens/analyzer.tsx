@@ -7,18 +7,27 @@ import {
   SAMPLE_MESSAGE,
   SECTION_IDS,
 } from "@/data/trust-lens";
+import { analyzeMessage, type ScamAnalysis } from "@/lib/scam-detection";
+import { scrollToSection } from "@/lib/scroll";
 import { cn } from "@/lib/utils";
 import { RotateCcw, ScanSearch, Sparkles, TriangleAlert } from "lucide-react";
-import { useId, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 
 export function Analyzer({
-  onSubmit,
+  onAnalysisChange,
 }: {
-  /** Receives the trimmed message text when the user asks for an analysis. */
-  onSubmit: (message: string) => void;
+  /**
+   * Called with the result of a check, or with `null` whenever the existing
+   * result stops describing what is in the input.
+   */
+  onAnalysisChange: (analysis: ScamAnalysis | null) => void;
 }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  /** Whether the lifted result currently belongs to some earlier text. */
+  const hasAnalysed = useRef(false);
+
   const messageId = useId();
   const counterId = useId();
   const noticeId = useId();
@@ -26,22 +35,42 @@ export function Analyzer({
 
   const isNearLimit = message.length >= MAX_MESSAGE_LENGTH * 0.9;
 
+  /** Drops a result that no longer matches the input, and says so. */
+  const discardResult = () => {
+    if (!hasAnalysed.current) return;
+    hasAnalysed.current = false;
+    onAnalysisChange(null);
+    setNotice("The previous result was cleared because the message changed.");
+  };
+
   const handleAnalyze = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     if (!message.trim()) {
       setError("Paste or load a message before analyzing.");
+      setNotice(null);
+      hasAnalysed.current = false;
+      onAnalysisChange(null);
       return;
     }
+
     setError(null);
-    onSubmit(message);
+    setNotice(null);
+    hasAnalysed.current = true;
+    onAnalysisChange(analyzeMessage(message));
+    scrollToSection(SECTION_IDS.results);
   };
 
   const handleClear = () => {
     setMessage("");
     setError(null);
+    setNotice(null);
+    hasAnalysed.current = false;
+    onAnalysisChange(null);
   };
 
   const handleLoadSample = () => {
+    discardResult();
     setMessage(SAMPLE_MESSAGE);
     setError(null);
   };
@@ -93,6 +122,7 @@ export function Analyzer({
               name="message"
               value={message}
               onChange={(event) => {
+                discardResult();
                 setMessage(event.target.value);
                 if (error) setError(null);
               }}
@@ -136,12 +166,17 @@ export function Analyzer({
               </p>
             )}
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <Button
-                type="submit"
-                size="lg"
-                className="lens-cta-glow sm:min-w-48"
+            {notice && !error && (
+              <p
+                role="status"
+                className="mt-3 text-xs leading-relaxed text-muted-foreground"
               >
+                {notice}
+              </p>
+            )}
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <Button type="submit" size="lg" className="lens-cta-glow sm:min-w-48">
                 <ScanSearch className="size-4" aria-hidden="true" />
                 Analyze Message
               </Button>
@@ -168,8 +203,9 @@ export function Analyzer({
 
             <p className="mt-5 border-t border-border/60 pt-4 text-xs leading-relaxed text-muted-foreground">
               Privacy notice: TrustLens never uploads your message. Everything
-              stays inside this browser tab — there is no account, no server-side
-              storage, and no logging of the text you paste.
+              stays inside this browser tab — the check runs as plain rules in
+              this page, with no account, no server-side storage, no third-party
+              service and no logging of the text you paste.
             </p>
           </form>
         </Reveal>

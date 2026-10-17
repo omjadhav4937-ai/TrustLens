@@ -165,8 +165,9 @@ export function Hero() {
               </ul>
 
               <p className="mt-5 border-t border-border/60 pt-4 text-xs leading-relaxed text-muted-foreground">
-                Illustrative warning labels only. TrustLens has not scored this
-                message — the detection engine is not part of this step.
+                Illustrative warning labels only — this example has not been
+                scored. Load the sample message in the analyzer to see a real
+                result from the detection engine.
               </p>
             </div>
           </div>
