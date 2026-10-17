@@ -1,0 +1,17 @@
+{
+  "name": "TrustLens — See the Risk Behind Every Message.",
+  "short_name": "TrustLens",
+  "description": "Check a suspicious SMS, email, or chat message: the warning signs, the risk level, and the safer next step. Private by design.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e1524",
+  "theme_color": "#0e1524",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
