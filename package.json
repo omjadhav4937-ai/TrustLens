@@ -11,6 +11,7 @@
     "test:e2e": "playwright test",
     "evaluate": "bun scripts/evaluate-detector.ts",
     "evaluate:holdout": "bun scripts/evaluate-holdout.ts",
+    "evaluate:credential-proposal": "bun scripts/evaluate-credential-proposal.ts",
     "format": "prettier --write .",
     "preview": "vite preview"
   },

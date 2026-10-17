@@ -16,7 +16,9 @@ bun test src/lib/scam-detection/evaluation    # integrity + reproducibility chec
 
 A separate 50-case holdout is reported in
 [HOLDOUT-EVALUATION.md](HOLDOUT-EVALUATION.md). Its metrics are never merged
-with these, and `bun run evaluate` continues to report only this dataset.
+with these, and `bun run evaluate` continues to report only this dataset. A
+proposal-only dry run for extending the credential rule, including simulated
+scores, is in [CREDENTIAL-RULE-PROPOSAL.md](CREDENTIAL-RULE-PROPOSAL.md).
 
 ## Dataset design
 
@@ -252,7 +254,8 @@ in this step; the dataset was not used to tune the rules.
 | `bun run evaluate` | exit 0; 100 cases, 33 predicted positive, 74 binary cases |
 | `bun test src/lib/scam-detection/evaluation` | exit 0; 16 pass, 0 fail |
 | `bun run evaluate:holdout` | exit 0; separate 50-case report |
-| `bun test` | exit 0; 258 pass, 0 fail (226 existing + 16 evaluation + 16 holdout) |
+| `bun run evaluate:credential-proposal` | exit 0; simulated overlay, not production |
+| `bun test` | exit 0; 289 pass, 0 fail (226 existing + 16 evaluation + 16 holdout + 31 proposal) |
 | `bunx tsc -b --noEmit` | exit 0 |
 | `bunx eslint src/lib/scam-detection/evaluation scripts/evaluate-detector.ts` | exit 0 |
 

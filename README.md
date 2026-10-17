@@ -119,17 +119,20 @@ bun run preview      # serve the built output locally
 bun test                                    # unit + component suite
 bun run evaluate                            # labelled evaluation dataset
 bun run evaluate:holdout                    # separate 50-case holdout
+bun run evaluate:credential-proposal        # proposal-only dry run
 bun run test:e2e                            # real-browser Playwright suite
 bunx tsc -b --noEmit                        # app type-check
 bunx tsc -p tsconfig.e2e.json --noEmit      # browser-suite type-check
 bun run lint                                # ESLint
 ```
 
-**Unit and component tests** — 258 tests in 7 files, covering the rule engine, scoring,
+**Unit and component tests** — 289 tests in 8 files, covering the rule engine, scoring,
 link heuristics, overlap-aware highlighting, false-positive behaviour on benign
 messages, server-rendered component output, the labelled evaluation dataset and
 its separate holdout (see [docs/EVALUATION.md](docs/EVALUATION.md) and
-[docs/HOLDOUT-EVALUATION.md](docs/HOLDOUT-EVALUATION.md)).
+[docs/HOLDOUT-EVALUATION.md](docs/HOLDOUT-EVALUATION.md)). The credential-rule
+proposal and its isolated dry run are in
+[docs/CREDENTIAL-RULE-PROPOSAL.md](docs/CREDENTIAL-RULE-PROPOSAL.md).
 
 **Browser tests** — 21 Playwright tests driving the real application in Chromium, in
 two viewport projects (1280×900 and 390×844). Each test runs only in the project it
