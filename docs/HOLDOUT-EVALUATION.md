@@ -11,7 +11,9 @@ bun test src/lib/scam-detection/evaluation/holdout
 
 A separate proposal-only dry run for the credential rule, including simulated
 scores on this holdout, is in
-[CREDENTIAL-RULE-PROPOSAL.md](CREDENTIAL-RULE-PROPOSAL.md).
+[CREDENTIAL-RULE-PROPOSAL.md](CREDENTIAL-RULE-PROPOSAL.md). The follow-up
+Candidate A stress test is in
+[CREDENTIAL-STRESS-TEST.md](CREDENTIAL-STRESS-TEST.md).
 
 > These 50 messages are synthetic examples written inside this project. They are
 > not externally validated, not statistically representative, and the metrics
@@ -187,7 +189,7 @@ computed or claimed.**
 | --- | --- |
 | `bun run evaluate:holdout` | exit 0; 50 cases, 16 predicted positive |
 | `bun test src/lib/scam-detection/evaluation/holdout` | exit 0; 16 pass, 0 fail |
-| `bun test` | exit 0; 289 pass, 0 fail (258 previous + 31 proposal) |
+| `bun test` | exit 0; 305 pass, 0 fail (258 previous + 31 proposal + 16 stress) |
 | `bun run evaluate` | exit 0; original report unchanged |
 | `bunx tsc -b --noEmit` | exit 0 |
 | `bunx eslint src/lib/scam-detection/evaluation scripts` | exit 0 |

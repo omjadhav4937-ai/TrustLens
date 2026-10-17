@@ -12,6 +12,7 @@
     "evaluate": "bun scripts/evaluate-detector.ts",
     "evaluate:holdout": "bun scripts/evaluate-holdout.ts",
     "evaluate:credential-proposal": "bun scripts/evaluate-credential-proposal.ts",
+    "evaluate:credential-stress": "bun scripts/evaluate-credential-stress.ts",
     "format": "prettier --write .",
     "preview": "vite preview"
   },

@@ -12,6 +12,10 @@ bun test src/lib/scam-detection/evaluation/credential-proposal.test.ts
 The command prints aggregate counts and case IDs only. It never prints message
 text, URLs or rationales.
 
+A follow-up stress test of Candidate A is reported in
+[CREDENTIAL-STRESS-TEST.md](CREDENTIAL-STRESS-TEST.md). That evidence supersedes
+the earlier recommendation in this document; see the stress-test conclusion.
+
 ## 1. Problem statement
 
 The two existing evaluations showed the same family of misses: card-photo
@@ -302,6 +306,12 @@ not be adopted wholesale on the strength of two small synthetic sets.
 Candidate A still misses the long-message request, the substituted `0TP`, the
 transliterated code request, and every non-credential failure. Those remain
 candidates for later work, not reasons to widen this rule without more evidence.
+
+**Update after the stress test:** [CREDENTIAL-STRESS-TEST.md](CREDENTIAL-STRESS-TEST.md)
+found three new false positives on realistic legitimate card-image wording, so
+Candidate A is **not** ready for a production-integration proposal as written.
+The stress test recommends refining the card-image family first and re-running
+all three datasets.
 
 ## 13. No production behavior has changed
 

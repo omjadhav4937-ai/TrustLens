@@ -60,7 +60,7 @@ global state, so the same input always yields the same analysis (apart from
 | `src/lib/scam-detection/engine.ts` | Orchestration, scoring, thresholds, summary and score explanation |
 | `src/lib/scam-detection/highlight.ts` | Segments, per-finding targets, navigation-failure classification |
 | `src/lib/scam-detection/index.ts` | Public surface of the engine |
-| `src/lib/scam-detection/evaluation/` | 100-case synthetic labelled dataset, 50-case holdout, deterministic runner, integrity tests, credential proposal dry run (see [EVALUATION.md](EVALUATION.md), [HOLDOUT-EVALUATION.md](HOLDOUT-EVALUATION.md), [CREDENTIAL-RULE-PROPOSAL.md](CREDENTIAL-RULE-PROPOSAL.md)) |
+| `src/lib/scam-detection/evaluation/` | 100-case dataset, 50-case holdout, 60-case stress set, deterministic runner, integrity tests, credential proposal dry run (see [EVALUATION.md](EVALUATION.md), [HOLDOUT-EVALUATION.md](HOLDOUT-EVALUATION.md), [CREDENTIAL-RULE-PROPOSAL.md](CREDENTIAL-RULE-PROPOSAL.md), [CREDENTIAL-STRESS-TEST.md](CREDENTIAL-STRESS-TEST.md)) |
 | `src/data/trust-lens.ts` | Copy, `SAMPLE_MESSAGE`, limitations, safety actions, reporting details |
 | `src/components/trust-lens/` | Landing sections, analyzer, results, evidence navigation |
 | `src/pages/` | Route components (`Landing`, `Auth`, `Dashboard`, `NotFound`) |
@@ -115,10 +115,11 @@ wrong, fix the rule and say why in the commit.
 ## Testing
 
 ```bash
-bun test                                 # 289 tests, 8 files
+bun test                                 # 305 tests, 9 files
 bun run evaluate                         # 100-case detector evaluation (see EVALUATION.md)
 bun run evaluate:holdout                 # separate 50-case holdout (see HOLDOUT-EVALUATION.md)
 bun run evaluate:credential-proposal     # proposal-only dry run; never used by the app
+bun run evaluate:credential-stress       # Candidate A stress test (see CREDENTIAL-STRESS-TEST.md)
 bun run test:e2e                         # 21 browser tests, 2 viewport projects
 bunx tsc -b --noEmit                     # app
 bunx tsc -p tsconfig.e2e.json --noEmit   # browser suite
