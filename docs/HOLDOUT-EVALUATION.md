@@ -20,6 +20,22 @@ Candidate A stress test is in
 > below are **not estimates of real-world performance**. This is not independent
 > external validation: the author knows how the detector works.
 
+## Update: multilingual support (Step 16)
+
+A later step added Hindi, Marathi and Hinglish patterns to the existing rules. One
+holdout case is code-mixed: `TL-H-014` ("Aapka Cedar Bank account band ho jayega.
+Turant code bhejiye…"). It is now caught, so the current measured baseline is:
+
+| TP | FP | TN | FN | Precision | Recall | F1 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 12 | 1 | 19 | 8 | 0.923 | 0.600 | 0.727 |
+
+The tables and error lists below have been updated to this baseline. The earlier
+pre-multilingual result was 11 TP / 1 FP / 19 TN / 9 FN (P 0.917, R 0.550, F1
+0.687). No label, message, weight or threshold was edited. Candidate A/B overlay
+numbers also moved with the baseline; see
+[CREDENTIAL-RULE-PROPOSAL.md](CREDENTIAL-RULE-PROPOSAL.md).
+
 ## Separation from the original dataset
 
 - `HOLDOUT_CASES` lives in `src/lib/scam-detection/evaluation/holdout/` and is
@@ -84,32 +100,32 @@ audit; the CLI prints aggregate counts and case IDs only.
 ## Results
 
 Positive prediction is Medium or High (score ≥ 30), identical to the original
-evaluation. Risk bands over all 50 cases: **low 34, medium 16, high 0**.
+evaluation. Risk bands over all 50 cases: **low 33, medium 16, high 1**.
 
 Binary subset (40 scam/legitimate cases, ambiguous excluded):
 
 | Metric | Value |
 | --- | --- |
-| Predicted positive | 12 |
-| Predicted negative | 28 |
-| True positives | 11 |
+| Predicted positive | 13 |
+| Predicted negative | 27 |
+| True positives | 12 |
 | False positives | 1 |
 | True negatives | 19 |
-| False negatives | 9 |
-| Precision | 0.917 (91.7%) |
-| Recall | 0.550 (55.0%) |
-| F1 | 0.687 |
+| False negatives | 8 |
+| Precision | 0.923 (92.3%) |
+| Recall | 0.600 (60.0%) |
+| F1 | 0.727 |
 
 |  | Predicted positive | Predicted negative |
 | --- | --- | --- |
-| Expected `scam` (20) | 11 | 9 |
+| Expected `scam` (20) | 12 | 8 |
 | Expected `legitimate` (20) | 1 | 19 |
 
 By bucket:
 
 | Bucket | Cases | Low | Medium | High | Predicted positive |
 | --- | --- | --- | --- | --- | --- |
-| scam | 20 | 9 | 11 | 0 | 11 |
+| scam | 20 | 8 | 11 | 1 | 12 |
 | legitimate | 20 | 19 | 1 | 0 | 1 |
 | ambiguous | 10 | 6 | 4 | 0 | 4 |
 
@@ -136,25 +152,25 @@ alone cannot establish the sender.
 | `TL-H-007` | 0 | Broadband disconnection threat with a call-back number | "Disconnection" is not a blocking verb; no urgency keyword |
 | `TL-H-009` | 0 | Asks to forward a "recovery code" | Recovery codes are not in the credential vocabulary |
 | `TL-H-012` | 20 | Cloud account deleted in 30 days | "Deleted" is not a blocking verb; deadline only |
-| `TL-H-014` | 0 | Code-mixed Hindi/English account closure + code request | All patterns are English-only |
 | `TL-H-015` | 25 | Guaranteed returns on a bare-address payment page | Link rule alone caps at 25 |
 | `TL-H-016` | 20 | Prize with an upfront processing fee | Only "prize" matches; no second signal |
 | `TL-H-019` | 20 | Gift-card codes requested urgently by a "boss" | Only "urgently" matches |
 
 These are the same structural limits the original evaluation found (fixed
-credential vocabulary, single-weight link and prize rules, English-only
-patterns, blocking verbs), now reproduced on new messages. They were not used to
-tune anything in this step.
+credential vocabulary, single-weight link and prize rules, blocking verbs), now
+reproduced on new messages. They were not used to tune anything in this step.
+`TL-H-014`, previously missed because every pattern was English-only, is now
+caught by the multilingual foundation and is no longer a false negative.
 
 ## Comparison with the original dataset
 
 | Measure | Original (100) | Holdout (50) | Difference |
 | --- | --- | --- | --- |
 | Binary cases | 74 | 40 | — |
-| TP / FP / TN / FN | 25 / 3 / 33 / 13 | 11 / 1 / 19 / 9 | — |
-| Precision | 0.893 | 0.917 | +0.024 |
-| Recall | 0.658 | 0.550 | −0.108 |
-| F1 | 0.758 | 0.687 | −0.070 |
+| TP / FP / TN / FN | 25 / 3 / 33 / 13 | 12 / 1 / 19 / 8 | — |
+| Precision | 0.893 | 0.923 | +0.030 |
+| Recall | 0.658 | 0.600 | −0.058 |
+| F1 | 0.758 | 0.727 | −0.031 |
 
 The holdout's precision is slightly higher and its recall noticeably lower. With
 40 binary cases these differences are small-sample observations, not a ranking.
@@ -187,9 +203,9 @@ computed or claimed.**
 
 | Command | Result |
 | --- | --- |
-| `bun run evaluate:holdout` | exit 0; 50 cases, 16 predicted positive |
+| `bun run evaluate:holdout` | exit 0; 50 cases, 17 predicted positive |
 | `bun test src/lib/scam-detection/evaluation/holdout` | exit 0; 16 pass, 0 fail |
-| `bun test` | exit 0; 305 pass, 0 fail (258 previous + 31 proposal + 16 stress) |
+| `bun test` | exit 0; 370 pass, 0 fail (13 files) |
 | `bun run evaluate` | exit 0; original report unchanged |
 | `bunx tsc -b --noEmit` | exit 0 |
 | `bunx eslint src/lib/scam-detection/evaluation scripts` | exit 0 |
@@ -199,7 +215,8 @@ computed or claimed.**
 Fifty internally authored examples cannot establish accuracy, fairness or
 coverage. The set is English-first with one code-mixed message, heavily Indian
 banking/delivery in context, and every URL uses a reserved domain, which removes
-real TLD signals. The labels are one author's judgements, including the
+real TLD signals. The one now-detected code-mixed case does not make this a
+multilingual evaluation; that is a separate 60-case set. The labels are one author's judgements, including the
 ambiguous boundary. A different author would produce different numbers, and a
 real inbox contains far more variety, legitimate bulk mail, and deliberate
 adaptation to detectors.

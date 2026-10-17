@@ -152,14 +152,14 @@ describe("holdout evaluation runner", () => {
   it("counts every case once and reports the measured risk bands", () => {
     expect(holdoutReport.totalCases).toBe(50);
     expect(holdoutReport.riskBandCounts).toEqual({
-      low: 34,
+      low: 33,
       medium: 16,
-      high: 0,
+      high: 1,
     });
     expect(
       holdoutReport.predictedPositive + holdoutReport.predictedNegative,
     ).toBe(50);
-    expect(holdoutReport.predictedPositive).toBe(16);
+    expect(holdoutReport.predictedPositive).toBe(17);
   });
 
   it("excludes ambiguous cases from the binary metrics", () => {
@@ -181,29 +181,29 @@ describe("holdout evaluation runner", () => {
 
   it("reports the measured confusion matrix and metrics", () => {
     expect(holdoutReport.confusion).toEqual({
-      expectedPositive: { predictedPositive: 11, predictedNegative: 9 },
+      expectedPositive: { predictedPositive: 12, predictedNegative: 8 },
       expectedNegative: { predictedPositive: 1, predictedNegative: 19 },
     });
     expect(holdoutReport.binary).toMatchObject({
-      predictedPositive: 12,
-      predictedNegative: 28,
-      truePositives: 11,
+      predictedPositive: 13,
+      predictedNegative: 27,
+      truePositives: 12,
       falsePositives: 1,
       trueNegatives: 19,
-      falseNegatives: 9,
+      falseNegatives: 8,
     });
 
-    const precision = 11 / 12;
-    const recall = 11 / 20;
+    const precision = 12 / 13;
+    const recall = 12 / 20;
     expect(holdoutReport.binary.precision).toBeCloseTo(precision, 10);
     expect(holdoutReport.binary.recall).toBeCloseTo(recall, 10);
     expect(holdoutReport.binary.f1).toBeCloseTo(
       (2 * precision * recall) / (precision + recall),
       10,
     );
-    expect(holdoutOutput).toContain("Precision: 0.917");
-    expect(holdoutOutput).toContain("Recall:    0.550");
-    expect(holdoutOutput).toContain("F1:        0.687");
+    expect(holdoutOutput).toContain("Precision: 0.923");
+    expect(holdoutOutput).toContain("Recall:    0.600");
+    expect(holdoutOutput).toContain("F1:        0.727");
   });
 
   it("lists the exact holdout errors and ambiguous flags", () => {
@@ -214,7 +214,6 @@ describe("holdout evaluation runner", () => {
       "TL-H-007",
       "TL-H-009",
       "TL-H-012",
-      "TL-H-014",
       "TL-H-015",
       "TL-H-016",
       "TL-H-019",
@@ -239,8 +238,8 @@ describe("holdout evaluation runner", () => {
   it("reports per-bucket results that add up to the overall counts", () => {
     expect(holdoutReport.perBucket.scam).toMatchObject({
       total: 20,
-      predictedPositive: 11,
-      riskBandCounts: { low: 9, medium: 11, high: 0 },
+      predictedPositive: 12,
+      riskBandCounts: { low: 8, medium: 11, high: 1 },
     });
     expect(holdoutReport.perBucket.legitimate).toMatchObject({
       total: 20,

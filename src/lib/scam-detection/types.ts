@@ -1,3 +1,5 @@
+import type { LanguageInfo } from "./language";
+
 /**
  * Shared types for the TrustLens rule-based detection engine.
  *
@@ -168,6 +170,11 @@ export interface ScamAnalysis {
   links: AnalyzedLink[];
   /** Ids of the rules that matched, for quick assertions. */
   matchedRuleIds: string[];
+  /**
+   * Heuristic script/language label for the message. Advisory only: no rule
+   * reads it, so a wrong label can neither hide nor create a finding.
+   */
+  language: LanguageInfo;
 }
 
 /** Everything a rule may look at. */

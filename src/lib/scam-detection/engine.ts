@@ -1,3 +1,4 @@
+import { detectLanguage } from "./language";
 import { extractLinks } from "./links";
 import { normalizeMessage, sanitizeRanges } from "./normalize";
 import { RULES } from "./rules";
@@ -184,6 +185,7 @@ export function analyzeMessage(rawMessage: string): ScamAnalysis {
       analyzedAt,
       links: [],
       matchedRuleIds: [],
+      language: detectLanguage(message),
     };
   }
 
@@ -274,5 +276,6 @@ export function analyzeMessage(rawMessage: string): ScamAnalysis {
     analyzedAt,
     links,
     matchedRuleIds: findings.map((finding) => finding.ruleId),
+    language: detectLanguage(message),
   };
 }

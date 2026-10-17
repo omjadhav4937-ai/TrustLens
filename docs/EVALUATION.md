@@ -14,6 +14,25 @@ bun test src/lib/scam-detection/evaluation    # integrity + reproducibility chec
 > and to include deliberate false-positive traps. Percentages below describe this
 > dataset only.
 
+## Update: multilingual support (Step 16)
+
+The detector now includes Hindi, Marathi and Hinglish patterns, merged into the
+existing five rules. Weights, thresholds, the 100 cap and the evaluation method
+were not changed.
+
+- **This 100-case report is byte-identical to its pre-change baseline.** The set is
+  English-only, and the multilingual patterns do not match English text.
+- Two mixed-language cases in the other datasets now fire, as intended: holdout
+  `TL-H-014` (code-mixed closure + code request) and stress `TL-C-019`
+  (transliterated code request). Their baselines moved from 11 to 12 TP and from 2
+  to 3 TP respectively. Those snapshots and the Candidate A/B overlay numbers were
+  updated deliberately; the candidate matchers themselves were not edited.
+- The multilingual set and its measurements are separate:
+  [MULTILINGUAL-EVALUATION.md](MULTILINGUAL-EVALUATION.md). No combined metric is
+  computed across datasets.
+
+This does not make the numbers below a real-world accuracy claim.
+
 A separate 50-case holdout is reported in
 [HOLDOUT-EVALUATION.md](HOLDOUT-EVALUATION.md). Its metrics are never merged
 with these, and `bun run evaluate` continues to report only this dataset. A
@@ -258,22 +277,27 @@ in this step; the dataset was not used to tune the rules.
 | `bun run evaluate:holdout` | exit 0; separate 50-case report |
 | `bun run evaluate:credential-proposal` | exit 0; simulated overlay, not production |
 | `bun run evaluate:credential-stress` | exit 0; separate 60-case stress report |
-| `bun test` | exit 0; 305 pass, 0 fail (226 existing + 16 evaluation + 16 holdout + 31 proposal + 16 stress) |
+| `bun test` | exit 0; 370 pass, 0 fail (13 files) |
+| `bun run evaluate:multilingual` | exit 0; separate 60-case report |
 | `bunx tsc -b --noEmit` | exit 0 |
 | `bunx eslint src/lib/scam-detection/evaluation scripts/evaluate-detector.ts` | exit 0 |
 
 ## Regression verification
 
-- `src/lib/scam-detection/rules.ts`, `engine.ts`, `links.ts`, `types.ts` and
-  `highlight.ts` are unchanged: no rule, weight, threshold, cap or output field
-  was edited.
-- The UI is unchanged. The public `ScamAnalysis` shape is unchanged.
+- At the time this evaluation was built, `rules.ts`, `engine.ts`, `links.ts`,
+  `types.ts` and `highlight.ts` were unchanged: no weight, threshold or cap was
+  edited.
+- A later step added multilingual patterns inside the existing rules and an
+  advisory `language` field on `ScamAnalysis`. The original 100-case report is
+  still byte-identical, as recorded at the top of this document.
+- The rest of the UI is unchanged by the evaluation work.
 - All pre-existing tests pass unmodified.
 
 ## Limitations
 
 This dataset cannot establish real-world accuracy. It is small, written by one
-author, English-only, weighted toward Indian banking and delivery contexts, and
+author, English-only (the original set; the separate multilingual set covers four
+varieties), weighted toward Indian banking and delivery contexts, and
 the edge cases were chosen with knowledge of the rule shapes. Reserved `.invalid`
 hosts remove the TLD signals that real phishing links often carry, which makes
 some link cases harder than they would be in production; conversely, the scam

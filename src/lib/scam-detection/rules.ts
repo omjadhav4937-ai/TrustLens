@@ -1,3 +1,12 @@
+import {
+  MULTILINGUAL_ACCOUNT_THREAT_PATTERNS,
+  MULTILINGUAL_CREDENTIAL_REQUEST_PATTERNS,
+  MULTILINGUAL_LINK_CTA_PATTERNS,
+  MULTILINGUAL_PRIZE_PATTERNS,
+  MULTILINGUAL_PROTECTIVE_WARNING_PATTERNS,
+  MULTILINGUAL_STANDALONE_CREDENTIAL_PATTERNS,
+  MULTILINGUAL_URGENCY_PATTERNS,
+} from "./multilingual";
 import { collectMatches, overlaps } from "./normalize";
 import type { DetectionRule, TextRange } from "./types";
 
@@ -53,6 +62,8 @@ const URGENCY_PATTERNS: RegExp[] = [
   /\btime\s+is\s+running\s+out\b/i,
   /\btoday\s+itself\b/i,
   /\bbefore\s+it'?s\s+too\s+late\b/i,
+  // Hindi, Marathi and Hinglish urgency shapes. See `multilingual.ts`.
+  ...MULTILINGUAL_URGENCY_PATTERNS,
 ];
 
 /* ------------------------------------------------------------------ */
@@ -81,6 +92,8 @@ const ACCOUNT_THREAT_PATTERNS: RegExp[] = [
     String.raw`\b(?:${ACCOUNT_TERMS})\b[^.!?\n]{0,40}?\b(at\s+risk|under\s+review|flagged|on\s+hold)\b`,
     "i",
   ),
+  // Hindi, Marathi and Hinglish blocking/suspension shapes.
+  ...MULTILINGUAL_ACCOUNT_THREAT_PATTERNS,
 ];
 
 /* ------------------------------------------------------------------ */
@@ -111,6 +124,8 @@ const LINK_CTA_PATTERNS: RegExp[] = [
   /\b(?:log\s?in|sign\s?in|register|sign\s?up)\s+(?:here|now|at|using|via|through)\b/i,
   /\b(?:verify|update|complete|confirm)\b[^.!?\n]{0,20}?\b(?:using|via|through|at)\s+the\s+link\b/i,
   /\b(?:download|install)\s+(?:the\s+)?(?:app|application|file)\b/i,
+  // Hindi, Marathi and Hinglish click-through instructions.
+  ...MULTILINGUAL_LINK_CTA_PATTERNS,
 ];
 
 /* ------------------------------------------------------------------ */
@@ -130,6 +145,8 @@ const STANDALONE_CREDENTIAL_PATTERNS: RegExp[] = [
   /\bupi\s*pin\b/i,
   /\batm\s*pin\b/i,
   /\bcard\s*pin\b/i,
+  // Devanagari secrets that are unusual enough to count on their own.
+  ...MULTILINGUAL_STANDALONE_CREDENTIAL_PATTERNS,
 ];
 
 /** Weaker terms only count when a request verb sits next to them. */
@@ -152,6 +169,8 @@ const CREDENTIAL_REQUEST_PATTERNS: RegExp[] = [
     String.raw`\b(?:${REQUEST_VERBS})\b[^.!?\n]{0,40}?\b(?:otp|pin|password|passcode|code)\b[^.!?\n]{0,30}?\byou\s+(?:receive|received|will\s+receive|get|got|are\s+sent)\b`,
     "i",
   ),
+  // Hindi, Marathi and Hinglish request-verb shapes.
+  ...MULTILINGUAL_CREDENTIAL_REQUEST_PATTERNS,
 ];
 
 /**
@@ -169,6 +188,8 @@ const PROTECTIVE_WARNING_PATTERNS: RegExp[] = [
   /\bkeep\s+(?:it|this|the\s+(?:otp|code|pin|password))\s+(?:safe|secret|confidential|private|to\s+yourself)\b/i,
   /\bnever\s+ask(?:s)?\s+(?:for|you\s+for)\b/i,
   /\b(?:bank|we|staff|officials?)\b[^.!?\n]{0,20}?\bnever\s+ask/i,
+  // Hindi, Marathi and Hinglish "do not share" warnings.
+  ...MULTILINGUAL_PROTECTIVE_WARNING_PATTERNS,
 ];
 
 const CREDENTIAL_SAFE_NOTE_WARNING =
@@ -207,6 +228,8 @@ const PRIZE_PATTERNS: RegExp[] = [
   /\bcash\s+prize\b/i,
   /\bwin\s+(a|an|free|cash|prize|rs\.?|₹)\b/i,
   /\bselected\s+(for|as)\s+(a\s+)?(lucky|gift|prize|reward)\b/i,
+  // Hindi, Marathi and Hinglish prize/bait wording.
+  ...MULTILINGUAL_PRIZE_PATTERNS,
 ];
 
 /**

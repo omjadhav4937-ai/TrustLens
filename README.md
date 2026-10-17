@@ -26,6 +26,8 @@ reasoning can be read, checked, and argued with.
 
 - **Analyses pasted messages** of up to 1,500 characters, from any channel.
 - **Names the warning signs** it recognised, with the exact text that triggered each one.
+- **Reads English, Hindi, Marathi and Hinglish** with a tested multilingual
+  foundation. Coverage is partial and the language label is explicitly a heuristic.
 - **Explains each match** in plain language and gives one concrete next step.
 - **Highlights the evidence** inside the original message — including the awkward case
   where two findings overlap, so the shared text and the remaining evidence stay
@@ -68,6 +70,22 @@ no lookup against a URL reputation service.
 
 A rule that never ran is reported as *not evaluated*, which is deliberately different
 from *not matched*.
+
+### Language coverage
+
+The same five rules now include contextual patterns for **Hindi and Marathi in
+Devanagari**, and for **Hinglish** in Latin script. A rule still contributes its
+weight once, evidence still points at the original characters, and no translation
+API, model or network call is involved.
+
+`detectLanguage()` reports a variety label next to the score. It is advisory, and it
+never gates detection. Devanagari is shared by Hindi and Marathi, so the label is a
+function-word heuristic, not a reliable language identifier; thin or conflicting
+evidence is reported as **mixed** or **uncertain** with low confidence. Other Indian
+and non-Indian languages, image-only messages and voice notes are not covered.
+
+Measurements on a separate 60-case set — including the before/after numbers and the
+remaining misses — are in [docs/MULTILINGUAL-EVALUATION.md](docs/MULTILINGUAL-EVALUATION.md).
 
 ## Technology
 
@@ -121,27 +139,30 @@ bun run evaluate                            # labelled evaluation dataset
 bun run evaluate:holdout                    # separate 50-case holdout
 bun run evaluate:credential-proposal        # proposal-only dry run
 bun run evaluate:credential-stress          # Candidate A stress test
+bun run evaluate:multilingual               # separate 60-case multilingual set
 bun run test:e2e                            # real-browser Playwright suite
 bunx tsc -b --noEmit                        # app type-check
 bunx tsc -p tsconfig.e2e.json --noEmit      # browser-suite type-check
 bun run lint                                # ESLint
 ```
 
-**Unit and component tests** — 305 tests in 9 files, covering the rule engine, scoring,
+**Unit and component tests** — 370 tests in 13 files, covering the rule engine, scoring,
 link heuristics, overlap-aware highlighting, false-positive behaviour on benign
-messages, server-rendered component output, the labelled evaluation dataset and
-its separate holdout (see [docs/EVALUATION.md](docs/EVALUATION.md) and
-[docs/HOLDOUT-EVALUATION.md](docs/HOLDOUT-EVALUATION.md)). The credential-rule
-proposal and its isolated dry run are in
+messages, multilingual detection and language limits, server-rendered component output,
+the labelled evaluation datasets and the proposed-plan UI. The historical 100-case set,
+its separate holdout, the credential-rule proposal and the Candidate A stress test are
+documented in [docs/EVALUATION.md](docs/EVALUATION.md),
+[docs/HOLDOUT-EVALUATION.md](docs/HOLDOUT-EVALUATION.md),
 [docs/CREDENTIAL-RULE-PROPOSAL.md](docs/CREDENTIAL-RULE-PROPOSAL.md) and
-[docs/CREDENTIAL-STRESS-TEST.md](docs/CREDENTIAL-STRESS-TEST.md).
+[docs/CREDENTIAL-STRESS-TEST.md](docs/CREDENTIAL-STRESS-TEST.md). The multilingual set is
+in [docs/MULTILINGUAL-EVALUATION.md](docs/MULTILINGUAL-EVALUATION.md).
 
-**Browser tests** — 21 Playwright tests driving the real application in Chromium, in
+**Browser tests** — 30 Playwright tests driving the real application in Chromium, in
 two viewport projects (1280×900 and 390×844). Each test runs only in the project it
-targets, so a full run reports **21 passed and 21 skipped** — skipped by design, not
+targets, so a full run reports **30 passed and 30 skipped** — skipped by design, not
 skipped because anything failed. They cover the analysis flow, both evidence-navigation
-paths, keyboard activation, reduced motion, the mobile layout, and a check that the
-analysed message is never transmitted.
+paths, keyboard activation, reduced motion, the mobile layout, the pricing and API
+sections, and a check that the analysed message is never transmitted.
 
 The browser suite attaches to an **already running** server on `http://localhost:5173`;
 `playwright.config.ts` deliberately contains no `webServer` block and never starts or
@@ -160,20 +181,22 @@ test` collects `*.spec.ts`, so a Playwright spec with that name would be handed 
 unit runner.
 
 **Passing tests do not establish detection accuracy.** They show that the engine behaves
-as specified on the fixtures in the repository. No labelled dataset has been evaluated,
-and no accuracy, precision, or recall figure is claimed anywhere in this project.
+as specified on the fixtures in the repository. The labelled sets are small, synthetic
+and internally authored. Their precision/recall numbers describe those messages only;
+no real-world accuracy figure is claimed anywhere in this project.
 
 ## Project structure
 
 ```
 src/
-  lib/scam-detection/   rule engine: types, rules, engine, links, highlight (presentation-free)
-  components/trust-lens/ landing sections, analyzer, results, evidence navigation
+  lib/scam-detection/   rule engine: types, rules, engine, links, highlight
+                        language.ts / multilingual.ts — multilingual foundation (presentation-free)
+  components/trust-lens/ landing sections, analyzer, results, pricing, API, business model
   components/ui/        shadcn/ui primitives
-  data/trust-lens.ts    product copy, sample message, limitations, safety and reporting text
+  data/trust-lens.ts    product copy, plans, sample message, limitations, safety text
   pages/                route components
 e2e/                    Playwright specs and generated screenshots
-docs/                   development and demo documentation
+docs/                   development, evaluation, monetization and demo documentation
 ```
 
 ## Privacy and data handling
@@ -203,6 +226,23 @@ Verified from the source and measured in the browser:
   real deployment it should be removed at the platform level; see
   [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#platform-notes).
 
+## Proposed plans and API
+
+The landing page includes a **Protection for Every Level** pricing section and a
+separate **Power Your Product with TrustLens API** section. Both are business-model
+demonstrations, not live commercial features:
+
+- **Free ₹0** is the analyzer on this page and is available now.
+- **Premium ₹99/month** and **Business ₹2,999/month starting** are proposed. Their
+  buttons open an explanation; there is no checkout.
+- The API code panel is a labelled illustration. No endpoint exists, no keys are
+  issued, and no usage is metered or billed.
+- No payment details are collected, no waitlist exists, and no customer, revenue or
+  testimonial figure is invented.
+
+The full proposal, its constraints and its UI verification are in
+[docs/MONETIZATION.md](docs/MONETIZATION.md).
+
 ## What this prototype is not
 
 - **Not a scam determination.** A high score means the wording matches patterns that are
@@ -214,8 +254,9 @@ Verified from the source and measured in the browser:
 - **Not sender verification.** TrustLens cannot see who really sent a message, whether a
   number or address was spoofed, or whether the organisation named is involved.
 - **Not a machine-learning system.** There is no model and no training data.
-- **Not measured for accuracy.** The rule weights are editorial judgements, not
-  calibrated probabilities. There is no labelled test set, so no accuracy figure exists.
+- **Not validated for real-world accuracy.** The rule weights are editorial judgements,
+  not calibrated probabilities. The repository contains small synthetic labelled sets,
+  but their metrics describe only those hand-written messages.
 - **Not production-ready.** It is an academic prototype with a single-page flow, no
   persistence, and no back end.
 
@@ -234,7 +275,12 @@ breakdown:
 - A message that names a code without asking for it or warning about it is still counted.
   That is the cautious choice, and the rule says so.
 - Wording and link shape are all the engine can see. Paraphrased scams, image-only
-  messages, voice notes, and messages in other languages are outside its reach.
+  messages and voice notes are outside its reach.
+- Multilingual coverage is a **foundation**: English, Hindi and Marathi in Devanagari,
+  and Hinglish in Latin script. Other languages, romanised Marathi, heavy spelling
+  variation and paraphrases that avoid the configured patterns are not covered.
+- Language identification is heuristic. Hindi and Marathi share Devanagari, and the
+  label can be mixed or uncertain; it never changes the score.
 - Unicode trickery in links (homoglyphs, mixed scripts) is only partly handled.
 
 ## Reporting guidance
@@ -257,5 +303,9 @@ These are pointers to public reporting channels, not legal advice.
 
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — architecture, source layout, how to add a
   rule, testing strategy, platform notes, troubleshooting.
+- [docs/MULTILINGUAL-EVALUATION.md](docs/MULTILINGUAL-EVALUATION.md) — supported
+  varieties, language-identification limits, dataset, before/after metrics and misses.
+- [docs/MONETIZATION.md](docs/MONETIZATION.md) — proposed consumer plans, API tiers,
+  revenue model and the honesty constraints enforced in the UI.
 - [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) — a short, repeatable demonstration with exact
   inputs and verified expected output.

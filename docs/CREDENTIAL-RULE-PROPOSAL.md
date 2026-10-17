@@ -16,6 +16,27 @@ A follow-up stress test of Candidate A is reported in
 [CREDENTIAL-STRESS-TEST.md](CREDENTIAL-STRESS-TEST.md). That evidence supersedes
 the earlier recommendation in this document; see the stress-test conclusion.
 
+## Update: multilingual support (Step 16)
+
+A later step added Hindi, Marathi and Hinglish patterns to the **production**
+rules. The Candidate A/B matchers were **not** edited, but their baseline moved:
+holdout `TL-H-014` (code-mixed account closure + code request) is now caught by
+the shipped multilingual rule, so Candidate B no longer “recovers” it.
+
+Current holdout baseline and simulated overlays:
+
+| Run | TP | FP | TN | FN | Precision | Recall | F1 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Baseline (with multilingual rules) | 12 | 1 | 19 | 8 | 0.923 | 0.600 | 0.727 |
+| Candidate A (simulated) | 15 | 1 | 19 | 5 | 0.938 | 0.750 | 0.833 |
+| Candidate B (simulated) | 15 | 1 | 19 | 5 | 0.938 | 0.750 | 0.833 |
+
+The sections below have been updated to this baseline. The earlier
+pre-multilingual baseline was 11 / 1 / 19 / 9 (P 0.917, R 0.550, F1 0.687);
+Candidate A was 14 / 1 / 19 / 6 and B was 15 / 1 / 19 / 5. The stress-test
+conclusion — Candidate A needs card-image refinement before production — is
+unchanged.
+
 ## 1. Problem statement
 
 The two existing evaluations showed the same family of misses: card-photo
@@ -53,6 +74,10 @@ and routine verification worse. This proposal measures two scoped alternatives.
 Consequences: a request for "the six-digit code shown in your app", a photo of
 a card, or a recovery code has no listed term and scores 0 for this rule. A bare
 `OTP` mention without a warning scores 40 even when no one asked for it.
+
+A later step added multilingual patterns to the same five rules (Hindi, Marathi,
+Hinglish). That changed the baseline for code-mixed cases but did not add a rule,
+a weight or a threshold. See [MULTILINGUAL-EVALUATION.md](MULTILINGUAL-EVALUATION.md).
 
 The existing scoring configuration remains: credential 40, suspicious link 25,
 urgency 20, prize 20, account threat 15, Medium ≥30, High ≥60, cap 100.
@@ -177,14 +202,15 @@ These are synthetic fixtures; none contains a live URL.
 
 | Run | TP | FP | TN | FN | Precision | Recall | F1 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Baseline (shipped engine) | 11 | 1 | 19 | 9 | 0.917 | 0.550 | 0.687 |
-| Candidate A (simulated) | 14 | 1 | 19 | 6 | 0.933 | 0.700 | 0.800 |
+| Baseline (shipped engine) | 12 | 1 | 19 | 8 | 0.923 | 0.600 | 0.727 |
+| Candidate A (simulated) | 15 | 1 | 19 | 5 | 0.938 | 0.750 | 0.833 |
 | Candidate B (simulated) | 15 | 1 | 19 | 5 | 0.938 | 0.750 | 0.833 |
 
 - Recovered — A: `TL-H-003`, `TL-H-004`, `TL-H-009` (3).
-  B: the same three plus `TL-H-014` (4).
+  B: the same three (3). `TL-H-014` is already caught by the multilingual
+  baseline, so neither candidate recovers it.
 - New false positives: **0** for both.
-- Score/band changes — A: 3 / 3; B: 5 / 5. B's extra change is ambiguous
+- Score/band changes — A: 3 / 3; B: 4 / 4. B's extra change is ambiguous
   `TL-H-042`.
 - Family matches — A: card-image 1, recovery-code 1, app-code 1 (3 cases).
   B: card-image 2, recovery-code 1, app-code 2 (5 cases).
@@ -206,16 +232,17 @@ The only additional *ambiguous* flags are `TL-A-002` (IT helpdesk asking to read
 a code back — both candidates) and `TL-H-042` (passport scan request — B only).
 Ambiguous flags are reported separately and do not enter the confusion matrix.
 
-**False negatives still remaining.** Candidate A still misses `TL-E-002` (`0TP`),
-`TL-E-005` (long message asking for a code "sent to the registered mobile
-number"), and `TL-H-014` (code-mixed Hindi/English). B recovers all three.
+**False negatives still remaining.** Candidate A still misses `TL-E-002` (`0TP`)
+and `TL-E-005` (long message asking for a code "sent to the registered mobile
+number"). B recovers both. `TL-H-014` (code-mixed Hindi/English) is no longer a
+baseline miss: the multilingual production rule catches it.
 Neither candidate touches the non-credential misses (`TL-S-003`, `TL-S-008`,
 `TL-S-020`, `TL-S-022`, `TL-S-023`, `TL-E-013`, `TL-E-015`, `TL-E-020`,
 `TL-E-024`), which need link, urgency, prize or family-impersonation work rather
 than credential detection.
 
-**Trade-off.** B adds three true catches and one extra ambiguous flag across the
-two datasets, with no measured binary false positive. That looks dominant on
+**Trade-off.** B adds two true catches beyond A and one extra ambiguous flag
+across the two datasets, with no measured binary false positive. That looks dominant on
 this data, but the extra catch comes partly from identity-document matching,
 which is common in legitimate KYC and was not measured against real onboarding
 mail. The synthetic sets contain no legitimate passport/Aadhaar scan request,
@@ -231,7 +258,7 @@ overlay; a matched case only receives +40 once. `—` means no candidate match.
 | `TL-H-003` | scam | 0 Low | card-image → 40 Medium | card-image → 40 Medium | Desirable catch |
 | `TL-H-004` | scam | 0 Low | app-code → 40 Medium | app-code → 40 Medium | Desirable catch |
 | `TL-H-009` | scam | 0 Low | recovery-code → 40 Medium | recovery-code → 40 Medium | Desirable catch |
-| `TL-H-014` | scam | 0 Low | — → 0 Low | app-code → 40 Medium | A misses; B desirable |
+| `TL-H-014` | scam | 75 High (multilingual rule) | — → 75 High | — → 75 High | Already caught; neither candidate adds anything |
 | `TL-H-040` | legitimate | 40 Medium | — → 40 Medium | — → 40 Medium | Undesirable existing FP; unchanged |
 | `TL-S-003` | scam | 25 Low | — → 25 Low | — → 25 Low | Still missed; link-only, out of scope |
 | `TL-S-008` | scam | 25 Low | — → 25 Low | — → 25 Low | Still missed; link-only, out of scope |
@@ -291,9 +318,9 @@ Reasons:
 1. A recovers five previously missed scams across the two datasets (2 original,
    3 holdout) with **no new binary false positive** and only one new ambiguous
    flag.
-2. B's additional catches (`TL-E-002`, `TL-E-005`, `TL-H-014`) are real, but
-   they come from narrow obfuscation/transliteration tokens and from broadening
-   card-image matching to identity documents. The latter is exactly the shape of
+2. B's additional catches (`TL-E-002`, `TL-E-005`) are real, but they come from
+   narrow obfuscation tokens and from broadening card-image matching to identity
+   documents. The latter is exactly the shape of
    routine, legitimate KYC and was not tested against any legitimate example.
 3. A's in-app guard and protective-warning clause handling directly target the
    legitimate-onboarding risk that motivated this proposal.
@@ -313,14 +340,16 @@ Candidate A is **not** ready for a production-integration proposal as written.
 The stress test recommends refining the card-image family first and re-running
 all three datasets.
 
-## 13. No production behavior has changed
+## 13. Production behavior at the time of this proposal
 
-- `rules.ts`, `engine.ts`, `normalize.ts`, `links.ts`, `types.ts`, the UI and
-  `ScamAnalysis` are untouched.
+- At the time of the proposal, `rules.ts`, `engine.ts`, `normalize.ts`,
+  `links.ts`, `types.ts` and `ScamAnalysis` were untouched by this work.
 - Weights remain 20/15/25/40/20; thresholds 30/60; cap 100.
-- The original 100 cases and 50-case holdout are unchanged.
-- `bun run evaluate` output is byte-identical to the pre-step baseline;
-  `bun run evaluate:holdout` is unchanged.
-- The proposal lives only in
+- The original 100 cases and 50-case holdout contents are unchanged.
+- The proposal logic lives only in
   `src/lib/scam-detection/evaluation/credential-proposal.ts` and is not imported
   by application code.
+- A **later, separate** change added multilingual patterns to the production
+  rules. It did not edit any Candidate A/B matcher. The current baseline numbers
+  are in the update section at the top; the original 100-case output remains
+  byte-identical.

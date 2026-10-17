@@ -16,6 +16,26 @@ text, URLs or rationales.
 > real-world validation, and the metrics are not estimates of production
 > accuracy.
 
+## Update: multilingual support (Step 16)
+
+A later step added Hindi, Marathi and Hinglish patterns to the **production**
+rules. The Candidate A/B matchers were not edited. One stress case, `TL-C-019`
+("App me jo code dikh raha hai use bhej do"), is now caught by the shipped
+detector, so the current baseline is 3 TP / 4 FP / 26 TN / 17 FN (P 0.429,
+R 0.150, F1 0.222), and the simulated overlays are:
+
+| Method | TP | FP | TN | FN | Precision | Recall | F1 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Baseline (with multilingual rules) | 3 | 4 | 26 | 17 | 0.429 | 0.150 | 0.222 |
+| Candidate A (simulated) | 14 | 7 | 23 | 6 | 0.667 | 0.700 | 0.683 |
+| Candidate B (simulated) | 16 | 9 | 21 | 4 | 0.640 | 0.800 | 0.711 |
+
+The earlier pre-multilingual baseline was 2 / 4 / 26 / 18 (P 0.333, R 0.100,
+F1 0.154), Candidate A was 13 / 7 / 23 / 7 and Candidate B was 15 / 9 / 21 / 5.
+The sections below have been updated to the current numbers. **The conclusion is
+unchanged:** Candidate A still adds three false positives on legitimate
+card-image wording and is not ready for a production-integration proposal.
+
 ## 1. Purpose and limitations
 
 The previous two datasets showed Candidate A recovering five baseline false
@@ -69,10 +89,11 @@ recovery codes; ordinary document sharing.
 
 | TP | FP | TN | FN | Precision | Recall | F1 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2 | 4 | 26 | 18 | 0.333 | 0.100 | 0.154 |
+| 3 | 4 | 26 | 17 | 0.429 | 0.150 | 0.222 |
 
-Baseline true positives are incidental: `TL-C-002` (share + Aadhaar card) and
-`TL-C-013` (send + verification code). Baseline false positives are `TL-C-021`
+Baseline true positives are `TL-C-002` (share + Aadhaar card), `TL-C-013`
+(send + verification code) and `TL-C-019` (the Hinglish code request, now caught
+by the multilingual production rule). Baseline false positives are `TL-C-021`
 and `TL-C-042` (password setup/confirmation), `TL-C-023` ("type the verification
 code" in a field) and `TL-C-039` (forward an email containing a code in a PDF).
 No ambiguous case was flagged.
@@ -86,8 +107,8 @@ way in general.
 
 | Method | TP | FP | TN | FN | Precision | Recall | F1 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Baseline | 2 | 4 | 26 | 18 | 0.333 | 0.100 | 0.154 |
-| Candidate A | 13 | 7 | 23 | 7 | 0.650 | 0.650 | 0.650 |
+| Baseline | 3 | 4 | 26 | 17 | 0.429 | 0.150 | 0.222 |
+| Candidate A | 14 | 7 | 23 | 6 | 0.667 | 0.700 | 0.683 |
 
 - Recovered 11 baseline false negatives: `TL-C-001`, `TL-C-003`, `TL-C-005`–
   `TL-C-008`, `TL-C-010`–`TL-C-012`, `TL-C-015`, `TL-C-016`.
@@ -100,15 +121,16 @@ way in general.
 
 Candidate A still misses `TL-C-004` ("need a photo"), `TL-C-009` ("recovery
 key"), `TL-C-014` (protective phrase suppresses a request), `TL-C-017`
-(WhatsApp as verb), `TL-C-018` ("relay"), `TL-C-019` ("bhej do") and `TL-C-020`
-("numbers").
+(WhatsApp as verb), `TL-C-018` ("relay") and `TL-C-020` ("numbers"). `TL-C-019`
+("bhej do") is now caught by the production multilingual rule, not by the
+candidate matcher.
 
 ## 6. Candidate B results
 
 | Method | TP | FP | TN | FN | Precision | Recall | F1 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Baseline | 2 | 4 | 26 | 18 | 0.333 | 0.100 | 0.154 |
-| Candidate B | 15 | 9 | 21 | 5 | 0.625 | 0.750 | 0.682 |
+| Baseline | 3 | 4 | 26 | 17 | 0.429 | 0.150 | 0.222 |
+| Candidate B | 16 | 9 | 21 | 4 | 0.640 | 0.800 | 0.711 |
 
 - Recovered 13: A's 11 plus `TL-C-004` and `TL-C-009`.
 - Added 5 false positives: `TL-C-026`, `TL-C-029`, `TL-C-030`, `TL-C-033`,
@@ -138,14 +160,15 @@ secure portal (`TL-C-026`) and a negated "we do not need a photo" (`TL-C-030`).
 
 **False negatives are real too.** Both candidates miss `TL-C-014`, where a
 protective phrase ("don't keep … to yourself") suppresses an actual request, and
-`TL-C-017`–`TL-C-020`, which use channel-as-verb ("WhatsApp me"), "relay",
-"numbers", and a transliterated "bhej do". These are not edge-case trivia; they
+`TL-C-017`, `TL-C-018` and `TL-C-020`, which use channel-as-verb ("WhatsApp me"),
+"relay" and "numbers". The transliterated "bhej do" case (`TL-C-019`) is now
+caught by the production multilingual rule, so it is no longer a baseline miss. These are not edge-case trivia; they
 are ordinary wording variations.
 
-**Net effect.** Candidate A substantially improves recall on this set (0.100 →
-0.650) but 3 new false positives in 30 legitimate messages is too high to treat
+**Net effect.** Candidate A substantially improves recall on this set (0.150 →
+0.700) but 3 new false positives in 30 legitimate messages is too high to treat
 the rule as ready. Candidate B's higher recall comes with 5 new false positives
-and lower precision.
+and lower precision than A.
 
 ## 8. Ambiguous cases
 
@@ -158,17 +181,19 @@ relationship or purpose is missing. None were forced into the binary metrics.
 ## 9. Code-mixed-language limitations
 
 `TL-C-019` is a single Hindi/English example: "App me jo code dikh raha hai use
-bhej do." Both candidates miss it. Candidate B has five transliterated verbs, but
-"bhej do" is not among them. This is not a language capability and should not be
-expanded by adding individual tokens; a genuine solution needs a different
-approach and a much larger labelled set.
+bhej do." It was previously missed. The production multilingual rule now catches
+it; the Candidate A/B matchers still do not, because "bhej do" is not in B's
+small transliterated verb list. That does not make the candidate matchers a
+language capability. The multilingual foundation is evaluated separately on 60
+cases in [MULTILINGUAL-EVALUATION.md](MULTILINGUAL-EVALUATION.md), and even there
+the results are synthetic.
 
 ## 10. Recommendation
 
 **Further refinement, not production integration yet.** The new evidence does
 not support Candidate A as-is:
 
-1. It improves F1 from 0.154 to 0.650 on this stress set, and it still adds no
+1. It improves F1 from 0.222 to 0.683 on this stress set, and it still adds no
    false positive to the original or holdout datasets. That is real progress.
 2. But three of 30 realistic legitimate messages become false positives, all in
    the card-image family. "Not your card", conditional app guidance, and
@@ -184,11 +209,16 @@ That refined candidate should be re-run against the original, holdout and this
 stress set before a production-integration proposal. No candidate is ready to
 ship today.
 
-## 11. No production behavior changed
+## 11. Production behavior at the time of this test
 
-`rules.ts`, `engine.ts`, normalization, links, UI, public types, the original 100
-cases, the 50-case holdout and the Candidate A/B implementation are untouched.
-`bun run evaluate` and `bun run evaluate:holdout` remain byte-identical to their
-saved baselines. The stress set exists only under
+At the time of this stress test, `rules.ts`, `engine.ts`, normalization, links,
+UI, public types, the original 100 cases, the 50-case holdout and the Candidate
+A/B implementation were untouched. `bun run evaluate` was byte-identical to its
+saved baseline. The stress set exists only under
 `src/lib/scam-detection/evaluation/stress/` and is not imported by application
 code.
+
+A later, separate step added multilingual patterns to the production rules. It
+did not edit the Candidate A/B matchers. That change moved the production
+baseline as shown in the update section at the top; the original 100-case report
+remains byte-identical.

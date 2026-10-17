@@ -26,6 +26,8 @@ global state, so the same input always yields the same analysis (apart from
 ### Data flow of one check
 
 1. `Analyzer` holds the textarea in state. Submitting calls `analyzeMessage(message)`.
+   The result also carries an advisory `language` label (script plus a function-word
+   heuristic); no rule reads it.
 2. The result is lifted to `Landing`, which owns it as the single source of truth. Editing
    the textarea after a check **discards** the result and says so, so a report can never
    describe text that is no longer in the box.
@@ -57,12 +59,14 @@ global state, so the same input always yields the same analysis (apart from
 | `src/lib/scam-detection/normalize.ts` | Whitespace/case normalisation that preserves original offsets |
 | `src/lib/scam-detection/links.ts` | URL extraction and structural indicators (`observed` vs `inferred`) |
 | `src/lib/scam-detection/rules.ts` | The five rules: id, weight, copy, pure `detect()` |
+| `src/lib/scam-detection/language.ts` | Heuristic script/language label; advisory only, never gates detection |
+| `src/lib/scam-detection/multilingual.ts` | Hindi, Marathi and Hinglish patterns merged into the five rules |
 | `src/lib/scam-detection/engine.ts` | Orchestration, scoring, thresholds, summary and score explanation |
 | `src/lib/scam-detection/highlight.ts` | Segments, per-finding targets, navigation-failure classification |
 | `src/lib/scam-detection/index.ts` | Public surface of the engine |
-| `src/lib/scam-detection/evaluation/` | 100-case dataset, 50-case holdout, 60-case stress set, deterministic runner, integrity tests, credential proposal dry run (see [EVALUATION.md](EVALUATION.md), [HOLDOUT-EVALUATION.md](HOLDOUT-EVALUATION.md), [CREDENTIAL-RULE-PROPOSAL.md](CREDENTIAL-RULE-PROPOSAL.md), [CREDENTIAL-STRESS-TEST.md](CREDENTIAL-STRESS-TEST.md)) |
-| `src/data/trust-lens.ts` | Copy, `SAMPLE_MESSAGE`, limitations, safety actions, reporting details |
-| `src/components/trust-lens/` | Landing sections, analyzer, results, evidence navigation |
+| `src/lib/scam-detection/evaluation/` | 100-case dataset, 50-case holdout, 60-case stress set, 60-case multilingual set, deterministic runners, integrity tests, credential proposal dry run (see [EVALUATION.md](EVALUATION.md), [HOLDOUT-EVALUATION.md](HOLDOUT-EVALUATION.md), [CREDENTIAL-RULE-PROPOSAL.md](CREDENTIAL-RULE-PROPOSAL.md), [CREDENTIAL-STRESS-TEST.md](CREDENTIAL-STRESS-TEST.md), [MULTILINGUAL-EVALUATION.md](MULTILINGUAL-EVALUATION.md)) |
+| `src/data/trust-lens.ts` | Copy, plans, API copy, `SAMPLE_MESSAGE`, limitations, safety actions, reporting details |
+| `src/components/trust-lens/` | Landing sections, analyzer, results, pricing, API, business model |
 | `src/pages/` | Route components (`Landing`, `Auth`, `Dashboard`, `NotFound`) |
 | `e2e/` | Playwright specs (`*.e2e.ts`) and generated screenshots |
 | `src/components/ui/` | shadcn/ui primitives (generated, mostly untouched) |
@@ -79,6 +83,7 @@ import {
   extractLinks,          // (text) => AnalyzedLink[]
   buildHighlightPlan,    // (text, findings) => { segments, targets }
   navigationFailure,     // reason a navigation cannot happen, or null
+  detectLanguage,        // (text) => LanguageInfo (heuristic, advisory)
   MAX_SCORE, RISK_THRESHOLD_MEDIUM, RISK_THRESHOLD_HIGH,
 } from "@/lib/scam-detection";
 ```
@@ -86,6 +91,54 @@ import {
 `ScamAnalysis` always contains `ruleEvaluations` for **every** rule, each with a status of
 `matched`, `not-matched`, `not-evaluated` or `error`. That distinction is load-bearing: a
 rule that never ran must not be displayed as if it had cleared the message.
+
+## Multilingual foundation
+
+Two modules carry the language work:
+
+- `multilingual.ts` exports pattern arrays for urgency, account threats, link calls to
+  action, credential requests, protective warnings and prize bait. `rules.ts` spreads
+  them into the existing rule arrays. The weights and thresholds are untouched, and a
+  rule still counts once.
+- `language.ts` exports `detectLanguage()` and `languageEvidence()`. `ScamAnalysis.language`
+  is advisory; the risk overview shows it with a low-confidence note when the evidence
+  is thin. No rule reads it.
+
+Pattern rules for this module:
+
+1. Never use `\b` around Devanagari. JavaScript word boundaries are ASCII-only, and the
+   danda (`।`) sits inside the Devanagari block. Use `(?<![\p{L}\p{M}])` /
+   `(?![\p{L}\p{M}])` and the `u` flag.
+2. Include the danda in clause separators (`[^.!?।\n]`). Otherwise a request after a
+   full stop can be joined to a mention before it.
+3. Prefer a request/threat/bait shape over a translated keyword list. A bare “OTP”,
+   “account”, “bank” or “link” must not become suspicious on its own.
+4. Keep protective warnings multilingual. A genuine Hindi/Marathi/Hinglish code alert
+   says not to share the code; without the matching warning, the credential rule would
+   flag it.
+5. Do not claim language identification. Devanagari is shared, so the Hindi/Marathi
+   split is a guess and must be reported as uncertain when thin.
+
+Tests live in `src/lib/scam-detection/multilingual.test.ts` (behaviour, offsets, capping,
+network) and `evaluation/multilingual/multilingual.test.ts` (dataset integrity, metrics,
+privacy).
+
+## Proposed-plan UI
+
+The monetization surfaces are isolated from the analyzer:
+
+- `pricing.tsx` renders three plans from `PRICING_PLANS`. Only the Free plan is
+  `available`; the other two open a Radix dialog. There is no form, input or checkout.
+- `api-section.tsx` renders a static code panel and three proposed API tiers. The CTA
+  scrolls to the plans and sets a `role="status"` message; it performs no request.
+- `revenue-model.tsx` explains the three intended channels.
+- All copy and plan data live in `src/data/trust-lens.ts`. Keep the `PlanStatus`
+  distinction intact when adding a tier.
+
+`monetization.test.tsx` asserts the rendered copy, the absence of checkout markup, the
+placeholder API key and the honest labels. `e2e/trustlens.e2e.ts` covers keyboard
+dialogs, scrolling, the illustrative CTA, reduced motion, and layout at 1280, 820 and
+390 pixels. See [MONETIZATION.md](MONETIZATION.md).
 
 ## Adding or changing a rule
 
@@ -106,6 +159,9 @@ rule that never ran must not be displayed as if it had cleared the message.
      deliberately and explain the new numbers; never loosen it silently.
    - `evaluation/holdout/holdout.test.ts` — holdout integrity, separation from
      the original dataset, and its own snapshot. The two reports stay separate.
+   - `evaluation/stress/` and `evaluation/multilingual/` — their own frozen sets and
+     metrics. A rule change moves these snapshots; update them deliberately and
+     explain why, never by loosening a threshold.
 4. Weights are editorial. Changing one changes the risk band of fixtures, so update the
    documented demo output in [DEMO_GUIDE.md](DEMO_GUIDE.md) at the same time.
 
@@ -115,12 +171,13 @@ wrong, fix the rule and say why in the commit.
 ## Testing
 
 ```bash
-bun test                                 # 305 tests, 9 files
+bun test                                 # 370 tests, 13 files
 bun run evaluate                         # 100-case detector evaluation (see EVALUATION.md)
 bun run evaluate:holdout                 # separate 50-case holdout (see HOLDOUT-EVALUATION.md)
 bun run evaluate:credential-proposal     # proposal-only dry run; never used by the app
 bun run evaluate:credential-stress       # Candidate A stress test (see CREDENTIAL-STRESS-TEST.md)
-bun run test:e2e                         # 21 browser tests, 2 viewport projects
+bun run evaluate:multilingual            # separate 60-case multilingual set (see MULTILINGUAL-EVALUATION.md)
+bun run test:e2e                         # 30 browser tests, 2 viewport projects
 bunx tsc -b --noEmit                     # app
 bunx tsc -p tsconfig.e2e.json --noEmit   # browser suite
 bun run lint

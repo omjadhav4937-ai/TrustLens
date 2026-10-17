@@ -166,7 +166,7 @@ describe("stress dataset integrity", () => {
           dataset: "TL-H independently authored holdout (50 cases)",
         }),
       ),
-    ).toBe("18a51445");
+    ).toBe("9ddc53a9");
   });
 });
 
@@ -174,15 +174,15 @@ describe("stress evaluation results", () => {
   it("reports the production baseline for the stress set", () => {
     expect(stressReport.binary).toMatchObject({
       total: 50,
-      predictedPositive: 6,
-      truePositives: 2,
+      predictedPositive: 7,
+      truePositives: 3,
       falsePositives: 4,
       trueNegatives: 26,
-      falseNegatives: 18,
+      falseNegatives: 17,
     });
-    expect(stressReport.binary.precision).toBeCloseTo(2 / 6, 10);
-    expect(stressReport.binary.recall).toBeCloseTo(2 / 20, 10);
-    expect(stressReport.binary.f1).toBeCloseTo(0.1538, 4);
+    expect(stressReport.binary.precision).toBeCloseTo(3 / 7, 10);
+    expect(stressReport.binary.recall).toBeCloseTo(3 / 20, 10);
+    expect(stressReport.binary.f1).toBeCloseTo(0.2222, 4);
     expect(stressReport.ambiguous.total).toBe(10);
     expect(stressReport.ambiguous.predictedPositive).toBe(0);
   });
@@ -191,15 +191,15 @@ describe("stress evaluation results", () => {
     expect(candidateA.baseline).toEqual(stressReport.binary);
     expect(candidateA.simulated).toMatchObject({
       total: 50,
-      predictedPositive: 20,
-      truePositives: 13,
+      predictedPositive: 21,
+      truePositives: 14,
       falsePositives: 7,
       trueNegatives: 23,
-      falseNegatives: 7,
+      falseNegatives: 6,
     });
-    expect(candidateA.simulated.precision).toBeCloseTo(13 / 20, 10);
-    expect(candidateA.simulated.recall).toBeCloseTo(13 / 20, 10);
-    expect(candidateA.simulated.f1).toBeCloseTo(0.65, 10);
+    expect(candidateA.simulated.precision).toBeCloseTo(14 / 21, 10);
+    expect(candidateA.simulated.recall).toBeCloseTo(14 / 20, 10);
+    expect(candidateA.simulated.f1).toBeCloseTo(0.6829, 4);
     expect(candidateA.recoveredIds).toEqual([
       "TL-C-001",
       "TL-C-003",
@@ -231,15 +231,15 @@ describe("stress evaluation results", () => {
   it("reports Candidate B's measured stress metrics", () => {
     expect(candidateB.simulated).toMatchObject({
       total: 50,
-      predictedPositive: 24,
-      truePositives: 15,
+      predictedPositive: 25,
+      truePositives: 16,
       falsePositives: 9,
       trueNegatives: 21,
-      falseNegatives: 5,
+      falseNegatives: 4,
     });
-    expect(candidateB.simulated.precision).toBeCloseTo(15 / 24, 10);
-    expect(candidateB.simulated.recall).toBeCloseTo(15 / 20, 10);
-    expect(candidateB.simulated.f1).toBeCloseTo(0.6818, 4);
+    expect(candidateB.simulated.precision).toBeCloseTo(16 / 25, 10);
+    expect(candidateB.simulated.recall).toBeCloseTo(16 / 20, 10);
+    expect(candidateB.simulated.f1).toBeCloseTo(0.7111, 4);
     expect(candidateB.recoveredIds).toEqual([
       "TL-C-001",
       "TL-C-003",

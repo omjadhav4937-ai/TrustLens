@@ -46,7 +46,8 @@ export function RiskOverview({
   selectedRuleId: string | null;
   onSelectFinding: (ruleId: string) => void;
 }) {
-  const { riskLevel, score, findings, evaluatedRuleCount, analyzedAt } = analysis;
+  const { riskLevel, score, findings, evaluatedRuleCount, analyzedAt, language } =
+    analysis;
   const RiskIcon = RISK_ICON[riskLevel];
 
   return (
@@ -91,7 +92,14 @@ export function RiskOverview({
               label="Rules evaluated"
               value={`${evaluatedRuleCount} of ${RULES.length}`}
             />
+            <Stat label="Language (heuristic)" value={language.label} />
           </dl>
+
+          {language.confidence === "low" && (
+            <p className="mt-3 max-w-xl text-xs leading-relaxed text-muted-foreground">
+              {language.note}
+            </p>
+          )}
 
           <p className="mt-4 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted-foreground">
             <span className="font-medium text-foreground/80">A caveat: </span>

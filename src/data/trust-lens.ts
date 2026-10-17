@@ -1,16 +1,22 @@
 import {
   ArrowRightCircle,
+  Braces,
+  Building2,
+  Code2,
   EyeOff,
   FileSearch,
   Highlighter,
+  Layers3,
   Link2,
   ListChecks,
   MessagesSquare,
   MessageSquareText,
+  PlugZap,
   RotateCcw,
   ScanSearch,
   SlidersHorizontal,
   Sparkles,
+  User,
   type LucideIcon,
 } from "lucide-react";
 
@@ -30,6 +36,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: "Home", id: "home" },
   { label: "Analyze Message", id: "analyzer" },
   { label: "How It Works", id: "how-it-works" },
+  { label: "Pricing", id: "pricing" },
   { label: "About", id: "about" },
 ];
 
@@ -41,6 +48,10 @@ export const SECTION_IDS = {
   analyzer: "analyzer",
   results: "results",
   safety: "safety",
+  pricing: "pricing",
+  api: "api",
+  apiPlans: "api-plans",
+  businessModel: "business-model",
   about: "about",
 } as const;
 
@@ -331,7 +342,8 @@ export const DETECTION_LIMITATIONS: string[] = [
   "Reward, cashback and voucher wording is counted only next to a claim, a win or a free-gift offer. An ordinary balance or cashback notification is not counted.",
   "India's six-digit postal PIN code is not treated as a banking PIN, so a delivery message that mentions one is not flagged. A scam hiding behind that same wording would not be caught by this rule either.",
   "A message that names a code but neither asks for it nor warns you about it is still counted. That is the cautious choice, and the note on the rule says so.",
-  "The weights are editorial, not measured. No labelled dataset has been evaluated, so TrustLens publishes no accuracy percentage and claims none.",
+  "The weights are editorial, not measured. The repository includes small synthetic labelled sets, but they describe only those hand-written messages. TrustLens publishes no real-world accuracy percentage and claims none.",
+  "Language support is a tested foundation for English, Hindi and Marathi in Devanagari, and Hinglish. The language label is a heuristic, Devanagari is shared, and other languages are not covered.",
   "These rules read wording and link shape only. They cannot see who really sent a message, what a link would do, or whether a sender is genuine.",
 ];
 
@@ -436,3 +448,223 @@ export const SAFETY_CHECKLIST_NOTE =
 /** Shown when nothing was detected, so the panel still refuses to reassure. */
 export const SAFETY_NO_MATCH_NOTE =
   "No configured warning sign matched this message. Keep treating unexpected messages with care, and verify before you act on anything that asks for money or details.";
+
+/* ------------------------------------------------------------------ */
+/* Proposed plans and business model                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Everything in this block is a proposal, not a live commercial offer.
+ *
+ * The distinction is carried in the data (`status`) as well as in the copy, so
+ * a component cannot accidentally present a proposed plan as purchasable.
+ */
+export type PlanStatus = "available" | "proposed";
+
+export interface PricingPlan {
+  id: string;
+  icon: LucideIcon;
+  name: string;
+  /** Display price, e.g. "₹99". */
+  price: string;
+  /** Qualifier shown beside the price, e.g. "/month" or "starting at". */
+  priceNote: string;
+  audience: string;
+  features: string[];
+  cta: string;
+  status: PlanStatus;
+  /** Short status line shown inside the card. */
+  availability: string;
+  featured?: boolean;
+  /** Shown in the explanatory dialog for a proposed plan. */
+  dialogBody: string;
+}
+
+export const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: "free",
+    icon: User,
+    name: "Free",
+    price: "₹0",
+    priceNote: "/month",
+    audience: "For individuals getting started with scam awareness.",
+    features: [
+      "Basic message analysis",
+      "Risk scores and warning signs",
+      "Evidence-based explanations",
+      "Safety recommendations",
+    ],
+    cta: "Try Free",
+    status: "available",
+    availability: "Available now",
+    dialogBody:
+      "The free analyzer is available on this page and runs entirely in your browser. No account or payment is needed.",
+  },
+  {
+    id: "premium",
+    icon: Sparkles,
+    name: "Premium",
+    price: "₹99",
+    priceNote: "/month",
+    audience:
+      "For individuals who want additional convenience and higher usage.",
+    features: [
+      "Higher analysis limits",
+      "Analysis history",
+      "Enhanced reports",
+      "Additional convenience features",
+    ],
+    cta: "Coming Soon",
+    status: "proposed",
+    availability: "Proposed — not available",
+    featured: true,
+    dialogBody:
+      "Premium is a proposed plan. Its price, limits and features are illustrative hypotheses, and no subscription or payment flow exists yet. The free analyzer on this page remains fully usable in the meantime.",
+  },
+  {
+    id: "business",
+    icon: Building2,
+    name: "Business",
+    price: "₹2,999",
+    priceNote: "/month · starting price",
+    audience:
+      "For colleges, educational institutions and small organisations.",
+    features: [
+      "Scam-awareness training resources",
+      "Organisation-wide access options",
+      "Administrative reporting",
+      "Aggregate usage insights",
+    ],
+    cta: "Coming Soon",
+    status: "proposed",
+    availability: "Proposed — not available",
+    dialogBody:
+      "Business is a proposed plan for institutions. Pricing, seat counts and reporting features still need validation, and no organisation accounts or billing exist yet.",
+  },
+];
+
+export const PRICING_DISCLOSURE =
+  "Premium and Business plans are proposed offerings. Pricing and features are subject to validation. Subscriptions and payment processing are not currently active.";
+
+export interface ApiBenefit {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}
+
+export const API_BENEFITS: ApiBenefit[] = [
+  {
+    icon: Braces,
+    title: "Explainable Results",
+    description:
+      "Structured findings and plain-language explanations, rather than only a suspicious or not-suspicious label.",
+  },
+  {
+    icon: PlugZap,
+    title: "Developer-Friendly Integration",
+    description:
+      "A future TrustLens endpoint designed to fit into supported application workflows.",
+  },
+  {
+    icon: Layers3,
+    title: "Flexible Usage Plans",
+    description:
+      "Plans based on monthly usage and organisational requirements, once the API exists.",
+  },
+];
+
+export interface ApiPlan {
+  id: string;
+  name: string;
+  price: string;
+  priceNote: string;
+  audience: string;
+  benefits: string[];
+}
+
+export const API_PLANS: ApiPlan[] = [
+  {
+    id: "developer",
+    name: "Developer",
+    price: "Free",
+    priceNote: "with a future limited quota",
+    audience: "Students and developers experimenting with an integration.",
+    benefits: [
+      "Limited monthly requests",
+      "Basic response schema",
+      "Development and testing use",
+    ],
+  },
+  {
+    id: "startup",
+    name: "Startup",
+    price: "₹1,499",
+    priceNote: "/month",
+    audience: "Small applications, early-stage products and small teams.",
+    benefits: [
+      "Higher request quota",
+      "API usage reports",
+      "Integration documentation",
+      "Email support, if operationally feasible",
+    ],
+  },
+  {
+    id: "growth",
+    name: "Growth / Enterprise",
+    price: "From ₹4,999",
+    priceNote: "/month · Enterprise by discussion",
+    audience:
+      "Growing platforms, fintech products, marketplaces and larger organisations.",
+    benefits: [
+      "Higher usage limits",
+      "Organisational usage reporting",
+      "Configurable quota plans",
+      "Enterprise support arrangements",
+    ],
+  },
+];
+
+/** Every API limitation that must travel with the illustrative example. */
+export const API_LIMITATIONS: string[] = [
+  "No TrustLens API is hosted today, and no API keys are issued.",
+  "The example request and response are illustrative only; the schema is not a final contract and will need to match the real detector output.",
+  "Rate limiting, usage metering, billing and subscription management are not implemented.",
+  "No uptime, latency, availability or detection-accuracy guarantee is offered.",
+];
+
+export const API_DISCLOSURE =
+  "The API is a future offering. The request, response and plan prices below are illustrative and subject to validation; nothing on this page can be used to make a live API call.";
+
+export interface RevenueChannel {
+  icon: LucideIcon;
+  audience: string;
+  title: string;
+  description: string;
+}
+
+export const REVENUE_CHANNELS: RevenueChannel[] = [
+  {
+    icon: User,
+    audience: "Individuals",
+    title: "Free core, paid convenience",
+    description:
+      "Keep essential scam awareness free, with optional paid convenience features for people who want more.",
+  },
+  {
+    icon: Building2,
+    audience: "Organisations",
+    title: "Awareness and reporting",
+    description:
+      "Future subscriptions for scam-awareness training, organisation-wide access and administrative reporting.",
+  },
+  {
+    icon: Code2,
+    audience: "Developers and platforms",
+    title: "API access",
+    description:
+      "Future API subscriptions or usage-based pricing for products that want to integrate message-risk analysis.",
+  },
+];
+
+export const REVENUE_PRIVACY_NOTE =
+  "The intended model is to charge for additional convenience and organisational capability, not for access to people's private message content. That is a product intention, not a completed privacy design: any future hosted API would need its own privacy and security review.";

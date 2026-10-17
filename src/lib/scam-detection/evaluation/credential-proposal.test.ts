@@ -261,10 +261,10 @@ describe("simulation overlay", () => {
       falseNegatives: 9,
     });
     expect(holdoutA.simulated).toMatchObject({
-      truePositives: 14,
+      truePositives: 15,
       falsePositives: 1,
       trueNegatives: 19,
-      falseNegatives: 6,
+      falseNegatives: 5,
     });
     expect(holdoutB.simulated).toMatchObject({
       truePositives: 15,
@@ -289,7 +289,6 @@ describe("simulation overlay", () => {
       "TL-H-003",
       "TL-H-004",
       "TL-H-009",
-      "TL-H-014",
     ]);
     expect(originalA.newFalsePositiveIds).toEqual([]);
     expect(originalB.newFalsePositiveIds).toEqual([]);
@@ -299,7 +298,7 @@ describe("simulation overlay", () => {
     expect(originalA.scoreChanges).toBe(3);
     expect(originalB.scoreChanges).toBe(5);
     expect(holdoutA.scoreChanges).toBe(3);
-    expect(holdoutB.scoreChanges).toBe(5);
+    expect(holdoutB.scoreChanges).toBe(4);
   });
 
   it("keeps the shipped baseline metrics inside the overlay", () => {
@@ -317,13 +316,13 @@ describe("simulation overlay", () => {
     const holdout = simulateCandidate(HOLDOUT_CASES, "B", "holdout");
     expect(holdout.baseline).toMatchObject({
       total: 40,
-      truePositives: 11,
+      truePositives: 12,
       falsePositives: 1,
       trueNegatives: 19,
-      falseNegatives: 9,
+      falseNegatives: 8,
     });
-    expect(holdout.baseline.precision).toBeCloseTo(11 / 12, 10);
-    expect(holdout.baseline.recall).toBeCloseTo(11 / 20, 10);
+    expect(holdout.baseline.precision).toBeCloseTo(12 / 13, 10);
+    expect(holdout.baseline.recall).toBeCloseTo(12 / 20, 10);
   });
 
   it("excludes ambiguous cases from the binary metrics", () => {

@@ -555,6 +555,34 @@ test.describe("reduced motion", () => {
     test.skip(test.info().project.name !== "desktop", "desktop project only");
   });
 
+  test("shows the proposed plan sections without motion", async ({ page }) => {
+    await page.goto("/");
+    await page.locator("#pricing").scrollIntoViewIfNeeded();
+
+    await expect(
+      page.getByRole("heading", { name: "Protection for Every Level" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Power Your Product with TrustLens API" }),
+    ).toBeVisible();
+
+    const opacity = () =>
+      page.evaluate(() => {
+        const heading = [...document.querySelectorAll("h2")].find((element) =>
+          element.textContent?.includes("Protection for Every Level"),
+        );
+        let node: Element | null = heading ?? null;
+        let lowest = 1;
+        while (node) {
+          lowest = Math.min(lowest, Number(getComputedStyle(node).opacity));
+          node = node.parentElement;
+        }
+        return lowest;
+      });
+    // The page-level fade still runs; poll until it has settled at 1.
+    await expect.poll(opacity).toBe(1);
+  });
+
   test("drops the pulse animation and the transitions", async ({ page }) => {
     await analyze(page);
     expect(
@@ -571,6 +599,253 @@ test.describe("reduced motion", () => {
     // The pulse keyframes are inside a no-preference query, so nothing animates.
     expect(styles?.animationName).toBe("none");
     expect(styles?.transitionDuration).toBe("0s");
+  });
+});
+
+/* ------------------------------------------- proposed plans and the API */
+
+test.describe("proposed plans and the illustrative API", () => {
+  test.beforeEach(() => {
+    test.skip(test.info().project.name !== "desktop", "desktop project only");
+  });
+
+  test("reaches pricing from the header and renders all three plans", async ({ page }) => {
+    const errors = watchForPageErrors(page);
+    await page.goto("/");
+    await page
+      .getByRole("navigation", { name: "Primary" })
+      .getByRole("link", { name: "Pricing" })
+      .click();
+
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Protection for Every Level" }),
+    ).toBeVisible();
+    await expect(page.locator("[data-plan]")).toHaveCount(3);
+    await expect(page.locator('[data-plan="premium"]')).toContainText("Most Popular");
+    await expect(page.locator('[data-plan="premium"]')).toContainText("₹99");
+    await expect(page.locator('[data-plan="business"]')).toContainText("₹2,999");
+
+    // The heading is a real h2 inside the pricing section, not a styled div.
+    const headingInsideSection = await page.evaluate(() => {
+      const section = document.querySelector("#pricing");
+      const heading = section?.querySelector("h2");
+      return heading?.textContent?.trim() ?? null;
+    });
+    expect(headingInsideSection).toBe("Protection for Every Level");
+
+    await assertNoPageErrors(errors);
+  });
+
+  test("Try Free moves the reader to the working analyzer", async ({ page }) => {
+    await page.goto("/#pricing");
+    await page.getByRole("link", { name: "Try Free" }).click();
+
+    const textarea = page.getByLabel("Your message");
+    await expect(textarea).toBeInViewport();
+    await expect(
+      page.getByRole("button", { name: "Analyze Message" }),
+    ).toBeInViewport();
+  });
+
+  test("Coming Soon explains the plan and never starts a checkout", async ({ page }) => {
+    const errors = watchForPageErrors(page);
+    await page.goto("/#pricing");
+
+    const premium = page.locator('[data-plan="premium"]');
+    await premium.getByRole("button", { name: "Coming Soon" }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("Premium is a proposed plan");
+    await expect(dialog).toContainText(
+      "Subscriptions and payment processing are not currently active.",
+    );
+    await expect(dialog).toContainText("no subscription or payment flow exists yet");
+    await expect(dialog.locator("input")).toHaveCount(0);
+
+    // Two "Close" controls exist: the footer button and the icon button.
+    await dialog.getByRole("button", { name: "Close" }).first().click();
+    await expect(dialog).toBeHidden();
+    await assertNoPageErrors(errors);
+  });
+
+  test("the paid-plan button is reachable and operable by keyboard", async ({ page }) => {
+    await page.goto("/#pricing");
+
+    await page.getByRole("link", { name: "Try Free" }).focus();
+    await page.keyboard.press("Tab");
+
+    const focusedText = await page.evaluate(
+      () => document.activeElement?.textContent?.trim() ?? "",
+    );
+    expect(focusedText).toBe("Coming Soon");
+
+    const focusPaint = await page.evaluate(() => {
+      const element = document.activeElement as HTMLElement | null;
+      if (!element) return null;
+      const style = getComputedStyle(element);
+      return { boxShadow: style.boxShadow, outlineStyle: style.outlineStyle };
+    });
+    expect(focusPaint?.boxShadow ?? "none").not.toBe("none");
+
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  });
+
+  test("the API section is visibly illustrative and its CTA is honest", async ({ page }) => {
+    const errors = watchForPageErrors(page);
+    const apiRequests: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/v1/analyze")) apiRequests.push(request.url());
+    });
+
+    await page.goto("/#api");
+    await expect(
+      page.getByRole("heading", { name: "Power Your Product with TrustLens API" }),
+    ).toBeVisible();
+    await expect(page.locator("#api")).toContainText(
+      "Illustrative example — not a live endpoint.",
+    );
+    await expect(page.locator("#api")).toContainText("YOUR_API_KEY");
+    await expect(page.locator("[data-api-plan]")).toHaveCount(3);
+    await expect(page.locator("#api")).toContainText("Proposed");
+
+    await page.getByRole("button", { name: "Explore API Plans — Coming Soon" }).click();
+
+    await expect(page.getByRole("status")).toBeVisible();
+    await expect(page.getByRole("status")).toContainText(
+      "API access is planned, not available",
+    );
+    await expect(page.locator("#api-plans")).toBeInViewport();
+    expect(apiRequests).toEqual([]);
+
+    await assertNoPageErrors(errors);
+  });
+
+  test("keeps proposed-plan text at a readable contrast", async ({ page }) => {
+    await page.goto("/#pricing");
+    await page.locator("#pricing").scrollIntoViewIfNeeded();
+
+    const ratios = await page.evaluate(() => {
+      type Rgba = { r: number; g: number; b: number; a: number };
+      // Computed colours are oklch()/color(srgb ...), not rgb(), so resolve
+      // each one through a canvas rather than parsing the string.
+      const canvas = document.createElement("canvas");
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      const parse = (value: string): Rgba => {
+        if (!context) return { r: 0, g: 0, b: 0, a: 0 };
+        context.clearRect(0, 0, 1, 1);
+        context.fillStyle = "#000";
+        context.fillStyle = value;
+        context.fillRect(0, 0, 1, 1);
+        const data = context.getImageData(0, 0, 1, 1).data;
+        return { r: data[0], g: data[1], b: data[2], a: data[3] / 255 };
+      };
+      const over = (top: Rgba, bottom: Rgba): Rgba => ({
+        r: top.r * top.a + bottom.r * (1 - top.a),
+        g: top.g * top.a + bottom.g * (1 - top.a),
+        b: top.b * top.a + bottom.b * (1 - top.a),
+        a: top.a + bottom.a * (1 - top.a),
+      });
+      const luminance = (color: Rgba) => {
+        const channel = (value: number) => {
+          const c = value / 255;
+          return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        };
+        return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
+      };
+      const contrast = (element: Element) => {
+        const layers: Rgba[] = [];
+        let node: Element | null = element;
+        while (node) {
+          const color = parse(getComputedStyle(node).backgroundColor);
+          if (color.a > 0) layers.push(color);
+          if (color.a >= 0.99) break;
+          node = node.parentElement;
+        }
+        let background: Rgba = { r: 255, g: 255, b: 255, a: 1 };
+        for (let index = layers.length - 1; index >= 0; index -= 1) {
+          background = over(layers[index], background);
+        }
+        const foreground = over(parse(getComputedStyle(element).color), background);
+        const a = luminance(foreground);
+        const b = luminance(background);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      };
+
+      const pick = (selector: string) => {
+        const element = document.querySelector(selector);
+        return element ? Number(contrast(element).toFixed(2)) : null;
+      };
+
+      return {
+        audience: pick('[data-plan="premium"] p'),
+        feature: pick('[data-plan="premium"] li span'),
+        disclosure: pick("#pricing .max-w-3xl p"),
+        apiPlanText: pick('[data-api-plan="startup"] p'),
+        code: pick("#api pre span"),
+      };
+    });
+
+    for (const [name, ratio] of Object.entries(ratios)) {
+      expect(ratio, `${name} has no measurable contrast`).not.toBeNull();
+      expect(ratio ?? 0, `${name} contrast`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  test("keeps the new sections inside the viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.goto("/");
+    await page.locator("#pricing").scrollIntoViewIfNeeded();
+
+    const tabletCards = await page.locator("[data-plan]").evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { x: Math.round(rect.x), y: Math.round(rect.y) };
+      }),
+    );
+    // 820px lands on the two-column tablet layout: the third card wraps.
+    expect(tabletCards).toHaveLength(3);
+    expect(tabletCards[0].y).toBe(tabletCards[1].y);
+    expect(tabletCards[2].y).toBeGreaterThan(tabletCards[1].y);
+    expect(tabletCards[2].x).toBe(tabletCards[0].x);
+
+    await page.locator("#api-plans").scrollIntoViewIfNeeded();
+
+    const geometry = await page.evaluate(() => ({
+      pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
+      codePanelOverflow: [...document.querySelectorAll("#api pre")].map(
+        (pre) => pre.scrollWidth - pre.clientWidth,
+      ),
+    }));
+
+    expect(geometry.pageOverflow).toBeLessThanOrEqual(0);
+    // A code line may scroll inside its own panel; it must not widen the page.
+    expect(geometry.codePanelOverflow.length).toBeGreaterThan(0);
+
+    // At the lg breakpoint the five-link navigation appears; it must still fit.
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto("/");
+    const navOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(navOverflow).toBeLessThanOrEqual(1);
+    await expect(
+      page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Pricing" }),
+    ).toBeVisible();
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/#api");
+    const desktopOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(desktopOverflow).toBeLessThanOrEqual(1);
   });
 });
 
@@ -670,5 +945,63 @@ test.describe("narrow viewport", () => {
     // space that follows a mark, and it hangs rather than breaks the line).
     // Measured at 6px here: one mono space plus the mark's 2.4px inline padding.
     expect(geometry?.worstOverhang ?? 99).toBeLessThanOrEqual(8);
+  });
+});
+
+/* ---------------------------------- narrow viewport: plans and the API */
+
+test.describe("narrow viewport — plans and API", () => {
+  test.beforeEach(() => {
+    test.skip(test.info().project.name !== "mobile", "mobile project only");
+  });
+
+  test("stacks the pricing cards and keeps the page inside the viewport", async ({ page }) => {
+    const errors = watchForPageErrors(page);
+    await page.goto("/");
+    await page.locator("#pricing").scrollIntoViewIfNeeded();
+
+    await expect(page.locator("[data-plan]")).toHaveCount(3);
+    const boxes = await page.locator("[data-plan]").evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+        };
+      }),
+    );
+
+    expect(new Set(boxes.map((box) => box.x)).size).toBe(1);
+    expect(boxes[0].y).toBeLessThan(boxes[1].y);
+    expect(boxes[1].y).toBeLessThan(boxes[2].y);
+    expect(boxes.every((box) => box.width > 250)).toBe(true);
+
+    const pricingOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth,
+    );
+    expect(pricingOverflow).toBeLessThanOrEqual(1);
+
+    await page.locator("#api").scrollIntoViewIfNeeded();
+    await expect(
+      page.getByRole("heading", { name: "Power Your Product with TrustLens API" }),
+    ).toBeVisible();
+    await expect(page.locator("[data-api-plan]")).toHaveCount(3);
+
+    const apiOverflow = await page.evaluate(() => ({
+      page: document.documentElement.scrollWidth - window.innerWidth,
+      panels: [...document.querySelectorAll("#api pre")].map((pre) => ({
+        client: pre.clientWidth,
+        scroll: pre.scrollWidth,
+      })),
+    }));
+    expect(apiOverflow.page).toBeLessThanOrEqual(1);
+    expect(apiOverflow.panels.length).toBeGreaterThan(0);
+
+    await page.getByRole("button", { name: "Explore API Plans — Coming Soon" }).click();
+    await expect(page.getByRole("status")).toContainText(
+      "API access is planned, not available",
+    );
+    await assertNoPageErrors(errors);
   });
 });

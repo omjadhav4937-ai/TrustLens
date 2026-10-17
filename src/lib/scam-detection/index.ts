@@ -13,3 +13,9 @@ export {
 export { RULES, getRuleById } from "./rules";
 export * from "./highlight";
 export { extractLinks } from "./links";
+export { detectLanguage } from "./language";
+export type {
+  LanguageCode,
+  LanguageInfo,
+  ScriptKind,
+} from "./language";

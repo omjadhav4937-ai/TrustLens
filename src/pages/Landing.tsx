@@ -1,9 +1,12 @@
 import { About } from "@/components/trust-lens/about";
 import { Analyzer } from "@/components/trust-lens/analyzer";
+import { ApiSection } from "@/components/trust-lens/api-section";
 import { Capabilities } from "@/components/trust-lens/capabilities";
 import { Hero } from "@/components/trust-lens/hero";
 import { HowItWorks } from "@/components/trust-lens/how-it-works";
+import { Pricing } from "@/components/trust-lens/pricing";
 import { ResultsPanel } from "@/components/trust-lens/results-panel";
+import { RevenueModel } from "@/components/trust-lens/revenue-model";
 import { SafetyNotice } from "@/components/trust-lens/safety-notice";
 import { SiteFooter } from "@/components/trust-lens/site-footer";
 import { SiteHeader } from "@/components/trust-lens/site-header";
@@ -50,6 +53,9 @@ export default function Landing() {
         <Analyzer onAnalysisChange={handleAnalysisChange} />
         <ResultsPanel analysis={analysis} />
         <SafetyNotice />
+        <Pricing />
+        <ApiSection />
+        <RevenueModel />
         <About />
       </main>
 
