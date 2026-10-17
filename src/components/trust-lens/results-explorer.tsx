@@ -7,6 +7,7 @@ import { SafetyActions } from "@/components/trust-lens/safety-actions";
 import {
   RULES,
   buildHighlightPlan,
+  navigationFailure,
   type ScamAnalysis,
 } from "@/lib/scam-detection";
 import { useReducedMotion } from "framer-motion";
@@ -135,25 +136,24 @@ export function ResultsExplorer({ analysis }: { analysis: ScamAnalysis }) {
       setShowAll(false);
       openCard(ruleId);
 
-      const target = plan.targets.get(ruleId);
       const mark = markRefs.current.get(ruleId);
+      const failure = navigationFailure(plan.targets.get(ruleId), mark);
 
-      /*
-       * Two ways this cannot land, both reported rather than hidden: there is no
-       * mark for the evidence at all, or the mark registered for this rule is
-       * gone — which happens when a node from a previous analysis is still
-       * referenced. A detached node must never be focused or scrolled to.
-       */
-      if (
-        !target ||
-        target.kind === "absent" ||
-        target.segmentIndex < 0 ||
-        !mark ||
-        !mark.isConnected
-      ) {
-        setUnreachableRuleId(ruleId);
+      if (failure !== null) {
+        /*
+         * A finding with no target is already explained by the inspector from
+         * the plan itself, so recording it here would replace the accurate
+         * "not in this message" sentence with a misleading one. Only a node
+         * that should have been present is reported as unreachable — and a
+         * detached node must never be scrolled to or focused.
+         */
+        setUnreachableRuleId(failure === "no-target" ? null : ruleId);
         return;
       }
+
+      // `navigationFailure` returns null only for a usable element. This keeps
+      // that guarantee in the type system as well as at runtime.
+      if (!mark) return;
 
       setUnreachableRuleId(null);
       mark.scrollIntoView({ block: "center", behavior: scrollBehavior });

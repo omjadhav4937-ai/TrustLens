@@ -106,14 +106,19 @@ export function MessageInspector({
 
     const label = selectedFinding.label;
 
+    /*
+     * Order matters. A finding the plan has no mark for is reported as exactly
+     * that, even when a navigation attempt also flagged it: "could not be
+     * located" is the more specific truth, and the two must never be swapped.
+     */
+    if (!selectedTarget || selectedTarget.kind === "absent") {
+      return `Showing ${label}. Its exact evidence could not be located in the rendered message, so there is no mark to highlight.`;
+    }
+
     // The target was resolved, so its evidence is in the message — but the
     // element could not be reached. Saying nothing here would imply success.
     if (unreachableRuleId === selectedFinding.ruleId) {
       return `Showing ${label}. Its evidence could not be brought into view, so nothing was highlighted.`;
-    }
-
-    if (!selectedTarget || selectedTarget.kind === "absent") {
-      return `Showing ${label}. Its exact evidence could not be located in the rendered message, so there is no mark to highlight.`;
     }
 
     if (selectedTarget.kind === "own") {

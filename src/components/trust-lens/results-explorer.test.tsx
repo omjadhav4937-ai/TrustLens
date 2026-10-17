@@ -1004,6 +1004,59 @@ describe("message inspector", () => {
     expect(html).not.toContain("outlined for this finding");
   });
 
+  it("reports a missing target as not located, never as unreachable", () => {
+    /*
+     * Reproduces the failure branch exactly as the handler can leave it: a
+     * finding the plan has no mark for, which a failed navigation attempt also
+     * flagged. The more specific truth has to win — before this was pinned, the
+     * unreachable sentence was checked first and replaced it, telling the reader
+     * the evidence had been found and then lost.
+     */
+    const base = analyzeMessage("Hi Mum, I'll be home around 7.");
+    const analysis = withFindings(base, [
+      {
+        ruleId: "phantom",
+        label: "A warning sign with no text",
+        shortLabel: "a phantom warning sign",
+        severity: "high",
+        weight: 20,
+        matchedText: "",
+        matchedPhrases: [],
+        occurrences: [],
+        explanation: "",
+        safeNextStep: "",
+      },
+    ]);
+
+    const html = render(
+      <MessageInspector
+        {...inspectorProps(analysis)}
+        selectedRuleId="phantom"
+        unreachableRuleId="phantom"
+      />,
+    );
+
+    expect(html).toContain("could not be located in the rendered message");
+    expect(html).not.toContain("could not be brought into view");
+    expect(html).toContain("Showing A warning sign with no text");
+  });
+
+  it("keeps the two failure sentences mutually exclusive", () => {
+    // A target that exists but whose node could not be reached says the other
+    // thing, so the pair never both appear and neither is ever a silent no-op.
+    const analysis = analyzeMessage(HIGH_RISK);
+    const reachable = render(
+      <MessageInspector
+        {...inspectorProps(analysis)}
+        selectedRuleId="credential-request"
+        unreachableRuleId="credential-request"
+      />,
+    );
+
+    expect(reachable).toContain("could not be brought into view");
+    expect(reachable).not.toContain("could not be located in the rendered message");
+  });
+
   it("accounts for unmarked evidence even when nothing is selected", () => {
     const analysis = analyzeMessage(HIGH_RISK);
     const html = render(<MessageInspector {...inspectorProps(analysis)} />);
@@ -1439,6 +1492,32 @@ describe("keyboard structure", () => {
     for (const tag of tags) {
       expect(["button", "a", "input"]).toContain(tag);
     }
+  });
+
+  it("gives every mark an explicit non-submitting button", () => {
+    // `type="button"` is what makes Enter and Space activate the mark as a
+    // selection rather than any default behaviour, in every context.
+    const marks = [...html.matchAll(/<button[^>]*lens-mark[^>]*>/g)].map((m) => m[0]);
+    expect(marks.length).toBeGreaterThan(0);
+    for (const mark of marks) {
+      expect(mark).toContain('type="button"');
+      // A visible focus indicator is carried by the class, so focus is never
+      // invisible to a keyboard user.
+      expect(mark).toContain("focus-visible:ring-[3px]");
+    }
+  });
+
+  it("separates the actionable mark from the evidence beside it", () => {
+    // A mark a reader can act on is a button; the remaining evidence is not, and
+    // the two are different elements rather than the same element with different
+    // styling. That difference is announced, not just painted.
+    const run = remainderTags(html)[0];
+    expect(run).toBeDefined();
+    expect(run?.startsWith("<mark")).toBe(true);
+    expect(run).not.toContain("type=\"button\"");
+    expect(run).not.toContain("focus-visible");
+    // One explanation for the whole run, however many pieces it was cut into.
+    expect([...html.matchAll(/also evidence for/g)].length).toBeLessThanOrEqual(1);
   });
 
   it("keeps the programmatic scroll target out of the tab order", () => {

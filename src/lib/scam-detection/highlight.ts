@@ -446,6 +446,41 @@ export function groupTargetsBySegment(
   return grouped;
 }
 
+/**
+ * Why a finding cannot be brought into the reader's view.
+ *
+ * - `no-target`  — the plan has no mark for this finding at all.
+ * - `no-element` — a target exists but nothing is registered for it.
+ * - `detached`   — the registered node is no longer in the document, which is
+ *                  what a leftover from a previous analysis looks like.
+ */
+export type NavigationFailure = "no-target" | "no-element" | "detached";
+
+/**
+ * Decides whether a resolved target can actually be focused, and why not.
+ *
+ * This lives here, as a pure function over the plan and a node, rather than
+ * inline in the click handler, because it is the branch that is hardest to
+ * reach and easiest to get wrong: a detached node must never be scrolled to or
+ * focused, and the reader must be told why nothing happened instead of being
+ * shown a silent no-op. Expressing it as data lets every branch be asserted
+ * without a browser.
+ *
+ * An absent target is checked first and independently of the node, so a stale
+ * element can never make an unmappable finding look navigable.
+ */
+export function navigationFailure(
+  target: HighlightTarget | undefined,
+  element: { isConnected: boolean } | null | undefined,
+): NavigationFailure | null {
+  if (!target || target.kind === "absent" || target.segmentIndex < 0) {
+    return "no-target";
+  }
+  if (!element) return "no-element";
+  if (!element.isConnected) return "detached";
+  return null;
+}
+
 /** Everything the message views need to render marks and navigate to them. */
 export interface HighlightPlan {
   segments: HighlightSegment[];

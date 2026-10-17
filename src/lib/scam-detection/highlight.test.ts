@@ -5,6 +5,7 @@ import {
   buildHighlightSegments,
   findHighlightTarget,
   groupTargetsBySegment,
+  navigationFailure,
   type HighlightSegment,
   type ScamFinding,
 } from "@/lib/scam-detection";
@@ -603,6 +604,109 @@ describe("navigation targets", () => {
         expect(segments[target.segmentIndex].severity).toBeDefined();
       }
     }
+  });
+});
+
+describe("navigation failure", () => {
+  const findings = analyzeMessage(OVERLAP_MESSAGE).findings;
+  const plan = buildHighlightPlan(OVERLAP_MESSAGE, findings);
+  const usable = { isConnected: true };
+  const detached = { isConnected: false };
+
+  it("allows a finding with its own mark", () => {
+    expect(navigationFailure(plan.targets.get("suspicious-link"), usable)).toBeNull();
+  });
+
+  it("allows a finding that resolves to a shared mark", () => {
+    const target = plan.targets.get("credential-request");
+    expect(target?.kind).toBe("shared");
+    expect(navigationFailure(target, usable)).toBeNull();
+  });
+
+  it("reports a finding the plan has no mark for", () => {
+    expect(navigationFailure(undefined, usable)).toBe("no-target");
+    // A rule that is not in this analysis at all, as after a new message.
+    const absent = findHighlightTarget(plan.segments, findings, "from-a-previous-message");
+    expect(absent.kind).toBe("absent");
+    expect(navigationFailure(absent, usable)).toBe("no-target");
+  });
+
+  it("refuses a navigation with no element, even for a valid target", () => {
+    expect(navigationFailure(plan.targets.get("suspicious-link"), null)).toBe(
+      "no-element",
+    );
+    expect(navigationFailure(plan.targets.get("suspicious-link"), undefined)).toBe(
+      "no-element",
+    );
+  });
+
+  it("refuses a detached node left over from a previous analysis", () => {
+    expect(navigationFailure(plan.targets.get("suspicious-link"), detached)).toBe(
+      "detached",
+    );
+  });
+
+  it("never lets a stale element make an unmappable finding navigable", () => {
+    // The target check runs first and independently of the node, so a node that
+    // happens to satisfy `isConnected` cannot promote an absent finding.
+    const absent = findHighlightTarget(plan.segments, findings, "from-a-previous-message");
+    expect(navigationFailure(absent, usable)).toBe("no-target");
+    expect(navigationFailure(absent, detached)).toBe("no-target");
+  });
+});
+
+/**
+ * Messages chosen to make every rule fire, overlap, or stay silent, so the
+ * invariant below is not resting on a single happy path.
+ */
+const ROUTABLE_CORPUS = [
+  OVERLAP_MESSAGE,
+  // A copy of the bundled sample, inline so this file stays free of UI imports.
+  "Dear Customer, your SBI YONO account will be BLOCKED today because your KYC is not updated. Update immediately within 24 hours by clicking http://sbi-kyc-verify.online/update and confirm your details. Share the OTP you receive on this number with our verification executive to restore your services. - SBI Customer Care",
+  "Your parcel could not be delivered. Click here http://203.0.113.9/track or verify at https://bit.ly/xyz1",
+  "Congratulations! You have won a prize of Rs 50,000. Claim your reward now by sharing your OTP at http://claim-prize.online/win or your prize will expire immediately.",
+  "Your KYC has expired, please respond immediately.",
+  "Your account will be blocked. Your account will be blocked again.",
+  "Hi Mum, I'll be home around 7. Do you need anything?",
+  "",
+];
+
+describe("every finding the engine produces is routable", () => {
+  it("resolves all findings to a real mark across the corpus", () => {
+    let findingsSeen = 0;
+
+    for (const message of ROUTABLE_CORPUS) {
+      const analysis = analyzeMessage(message);
+      const plan = buildHighlightPlan(analysis.message, analysis.findings);
+
+      // One target per finding, and never an absent one: no engine finding can
+      // reach the "exact evidence could not be located" branch today, so that
+      // branch is defence in depth rather than a state the interface can show.
+      expect(plan.targets.size).toBe(analysis.findings.length);
+      for (const item of analysis.findings) {
+        const target = plan.targets.get(item.ruleId);
+        expect(target?.kind).not.toBe("absent");
+        expect(navigationFailure(target, { isConnected: true })).toBeNull();
+      }
+
+      // Every finding is registered on exactly one mark.
+      const grouped = [...groupTargetsBySegment(plan.targets).values()].flat();
+      expect(grouped.slice().sort()).toEqual(
+        analysis.findings.map((item) => item.ruleId).slice().sort(),
+      );
+
+      // And every target really is a mark, never a plain or evidence-only piece.
+      for (const target of plan.targets.values()) {
+        const segment = plan.segments[target.segmentIndex];
+        expect(segment.severity).toBeDefined();
+        expect(segment.ruleId).toBeDefined();
+      }
+
+      findingsSeen += analysis.findings.length;
+    }
+
+    // The corpus has to actually exercise the rules, or this proves nothing.
+    expect(findingsSeen).toBeGreaterThan(15);
   });
 });
 
